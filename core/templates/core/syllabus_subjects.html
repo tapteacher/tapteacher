@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ category.name }} Subjects - TapTeacher</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: #fcfcfc;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .subject-card {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            text-decoration: none;
+            color: #111;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+
+        .subject-card:hover {
+            background: white;
+            border-color: #ccc;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+            transform: translateY(-5px);
+        }
+
+        .back-btn {
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 4px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #888;
+            padding: 50px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ category.name }} Subjects Syllabus</h1>
+            <a href="{% url 'syllabus_landing' %}" class="back-btn">← Back to Syllabus</a>
+        </div>
+
+        {% if subjects %}
+        <div class="subject-grid">
+            {% for sub in subjects %}
+            <a href="{% url 'syllabus_subject' category.slug sub.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                class="subject-card">
+                {{ sub.name }}
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            No subjects found for this category.
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>

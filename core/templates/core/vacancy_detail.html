@@ -1,0 +1,282 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="content-wrapper" style="width: 100%; max-width: 100%; overflow-y: auto; display: block; padding: 20px 0;">
+
+    <!-- Centered Container -->
+    <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px; display: flex; flex-direction: column;">
+
+        <!-- Back Button -->
+        <div style="margin-bottom: 20px;">
+            <button onclick="history.back()" class="btn-header hover-darken"
+                style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 4px; border: 1px solid #e0e0e0; background: #fff; color: #333; cursor: pointer;">
+                <span>&#8592;</span> Back
+            </button>
+        </div>
+
+        <!-- Header Card -->
+        <div class="header-card-darken"
+            style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 30px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0;">
+            <div>
+                <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: #000;">{{ subject_name }}</h1>
+                <div style="color: #666; font-size: 14px;">
+                    {{ vacancy_type_label }} - {{ category_title }} & Tution Vacancy
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; color: #666; font-size: 14px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                {{ district_name }}, {{ state_name }}
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div
+            style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; margin-bottom: 30px; flex-shrink: 0;">
+
+            <!-- Professional Qualification -->
+            <div style="padding: 25px 30px; border-bottom: 1px solid #f0f0f0;">
+                <h3 style="margin: 0 0 10px 0; font-size: 15px; font-weight: 700; color: #000;">Professional
+                    Qualification
+                </h3>
+                <div style="font-size: 14px; color: #666;">{{ qualification }}</div>
+            </div>
+
+            <!-- Eligibility Test -->
+            <div style="padding: 25px 30px; border-bottom: 1px solid #f0f0f0;">
+                <h3 style="margin: 0 0 10px 0; font-size: 15px; font-weight: 700; color: #000;">Eligibility Test</h3>
+                <div style="font-size: 14px; color: #666;">{{ eligibility }}</div>
+            </div>
+
+            <!-- Age Limit -->
+            <div style="padding: 25px 30px; border-bottom: 1px solid #f0f0f0;">
+                <h3 style="margin: 0 0 10px 0; font-size: 15px; font-weight: 700; color: #000;">Age Limit</h3>
+                <div style="font-size: 14px; color: #666;">{{ age_limit }}</div>
+            </div>
+
+            <!-- Total Compensation Package -->
+            <div style="padding: 25px 30px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 15px; font-weight: 700; color: #000;">Total Compensation
+                    Package
+                </h3>
+                <div style="font-size: 14px; color: #666;">{{ compensation }}</div>
+            </div>
+
+        </div>
+
+        <!-- Action Buttons -->
+        <div
+            style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; flex-shrink: 0; flex-wrap: wrap;">
+
+            <a href="javascript:void(0)" id="apply-btn" class="btn-primary hover-lift-strong"
+                style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #4CAF50; border: 1px solid #4CAF50; padding: 12px 30px; border-radius: 4px; color: #fff; font-size: 14px; cursor: pointer; min-width: 140px; text-decoration: none;">
+                Apply via Email
+            </a>
+
+            <!-- Save for Later (JS handled) -->
+            <button id="save-btn" class="hover-darken"
+                style="background: #fcfcfc; border: 1px solid #eee; padding: 12px 30px; border-radius: 4px; color: #000; font-size: 14px; cursor: pointer; min-width: 140px;">
+                Save for Later
+            </button>
+
+            <!-- Not Interested with Form -->
+            <button id="not-interested-btn" class="hover-darken"
+                style="background: #fcfcfc; border: 1px solid #eee; padding: 12px 30px; border-radius: 4px; color: #000; font-size: 14px; cursor: pointer; min-width: 140px;">Not
+                Interested</button>
+        </div>
+
+        <p style="margin-top: -20px; margin-bottom: 30px; font-size: 13px; color: #666; text-align: center;">
+            <span style="color: #d32f2f;">*</span> Note: Clicking "Apply via Email" will open your email client. Please
+            remember to <strong>attach your documents</strong> manually.
+        </p>
+
+
+    </div>
+</div>
+</div>
+
+<style>
+    .btn-apply-green {
+        transition: all 0.3s ease;
+    }
+
+    .btn-apply-green:hover {
+        background-color: #4CAF50 !important;
+        /* Green */
+        color: white !important;
+        border-color: #4CAF50 !important;
+        transform: translateY(-6px);
+        box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+    }
+
+    .header-card-darken {
+        transition: all 0.3s ease;
+    }
+
+    .header-card-darken:hover {
+        background-color: #f5f5f5 !important;
+    }
+</style>
+
+<script>
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Helper to get query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const isFromDashboard = urlParams.get('from') === 'dashboard';
+
+    // Apply Now button
+    const applyBtn = document.getElementById('apply-btn');
+    if (applyBtn) {
+        applyBtn.onclick = function (e) {
+            e.preventDefault(); // Stop default navigation
+
+            const appLink = "{{ application_link|escapejs }}";
+            const fullMailto = "{{ mailto_link|escapejs }}";
+            const postId = "{{ post_id }}";
+
+            // Visual feedback
+            const originalText = applyBtn.innerHTML;
+            applyBtn.innerHTML = "<span>⏳</span> Processing...";
+            applyBtn.style.opacity = "0.8";
+
+            // Function to open the link
+            const openLink = () => {
+                // If the backend generated a valid mailto link with content, prefer that
+                if (fullMailto && fullMailto.startsWith("mailto:")) {
+                    window.location.href = fullMailto;
+                }
+                // Fallback to raw link logic
+                else if (appLink.includes('@') && !appLink.startsWith('http')) {
+                    window.location.href = "mailto:" + appLink;
+                } else if (appLink && appLink !== "#" && appLink !== "None") {
+                    window.open(appLink, '_blank');
+                } else {
+                    alert('Application details not provided.');
+                }
+
+                // Reset button
+                setTimeout(() => {
+                    applyBtn.innerHTML = originalText;
+                    applyBtn.style.opacity = "1";
+                }, 1000);
+            };
+
+            // Save to DB first
+            if (postId && postId !== "None" && postId !== "None") {
+                fetch(`/apply/${postId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => response.json())
+                    .then(data => {
+                        console.log('Application saved:', data);
+                        // Redirect logic if needed, OR just open the link
+                        // If from dashboard, we might want to stay here or reload?
+                        // But usually "Apply" just opens the mail client.
+
+                        openLink();
+
+                        // Optional: Redirect back if needed, but mailto keeps you on page usually.
+                        if (data.success && isFromDashboard) {
+                            // reload to show updated status?
+                            // window.location.reload(); 
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Tracking error:", err);
+                        openLink(); // Open anyway even if tracking fails
+                    });
+            } else {
+                openLink();
+            }
+        };
+    }
+
+    // Save for Later button
+    const saveBtn = document.getElementById('save-btn');
+    if (saveBtn) {
+        saveBtn.onclick = function (e) {
+            e.preventDefault();
+            const postId = "{{ post_id }}";
+
+            // Visual feedback
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = "Saving...";
+
+            if (postId && postId !== "None") {
+                fetch(`/save/${postId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => response.json())
+                    .then(data => {
+                        saveBtn.innerText = originalText;
+                        if (data.success) {
+                            alert('Vacancy saved for later!');
+                            if (isFromDashboard) {
+                                window.location.href = '/user-dashboard/#pending';
+                            } else {
+                                // Redirect to institute view or just stay
+                                const redirectUrl = "{% url 'institute_view' state_name district_name institute_name %}?category={{ category_title|lower }}";
+                                window.location.href = redirectUrl;
+                            }
+                        } else {
+                            alert(data.message || 'Error saving vacancy');
+                        }
+                    });
+            }
+        };
+    }
+
+    // Not Interested button
+    const notInterestedBtn = document.getElementById('not-interested-btn');
+    if (notInterestedBtn) {
+        notInterestedBtn.onclick = function (e) {
+            e.preventDefault();
+            const postId = "{{ post_id }}";
+            const redirectUrl = "{% url 'institute_view' state_name district_name institute_name %}?category={{ category_title|lower }}";
+
+            if (postId && postId !== "None") {
+                fetch(`/not-interested/${postId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Marked as not interested.');
+                            if (isFromDashboard) {
+                                window.location.href = '/user-dashboard/#applied';
+                            } else {
+                                window.location.href = redirectUrl;
+                            }
+                        }
+                    });
+            }
+        };
+    }
+</script>
+{% endblock %}

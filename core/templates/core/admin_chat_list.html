@@ -1,0 +1,56 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}User Chats - Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+    <div style="margin-bottom: 30px;">
+        <a href="{% url 'admin_dashboard' %}"
+            style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #f5f5f5; border-radius: 6px; text-decoration: none; color: #333;">
+            <span>←</span> Back to Dashboard
+        </a>
+    </div>
+
+    <h1 style="margin-bottom: 30px;">💬 User Chats</h1>
+
+    {% if users_with_chats %}
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        {% for user in users_with_chats %}
+        <a href="{% url 'user_chat_detail' user.id %}"
+            style="display: block; padding: 20px; border-bottom: 1px solid #eee; text-decoration: none; color: inherit; transition: background 0.2s;"
+            onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0 0 5px 0; color: #333;">
+                        {{ user.get_full_name|default:user.username }}
+                        {% if user.unread_from_user > 0 %}
+                        <span
+                            style="display: inline-block; background: #f44336; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px;">
+                            {{ user.unread_from_user }} new
+                        </span>
+                        {% endif %}
+                    </h3>
+                    <p style="margin: 0; color: #666; font-size: 14px;">{{ user.email }}</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0; color: #999; font-size: 13px;">
+                        {{ user.total_messages }} message{{ user.total_messages|pluralize }}
+                    </p>
+                    <p style="margin: 5px 0 0 0; color: #999; font-size: 12px;">
+                        Last: {{ user.last_message_time|date:"M d, Y H:i" }}
+                    </p>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div
+        style="background: white; border-radius: 8px; padding: 60px 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <p style="color: #999; font-size: 18px; margin: 0;">No chat conversations yet</p>
+        <p style="color: #999; margin-top: 10px;">Users will appear here when they send their first message</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

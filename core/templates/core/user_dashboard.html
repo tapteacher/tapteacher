@@ -1,0 +1,570 @@
+{% extends 'core/base.html' %}
+
+{% load custom_filters %}
+
+{% block content %}
+<div class="dashboard-layout">
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+        <a href="{% url 'home' %}" class="back-btn">
+            ← Back to Home
+        </a>
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="main-content">
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('verification')">User Dashboard</button>
+                <button class="tab-btn" onclick="switchTab('applied')">Applied Vacancy</button>
+                <button class="tab-btn" onclick="switchTab('pending')">Pending Vacancy</button>
+                <button class="tab-btn" onclick="switchTab('chat')">Chat with Team</button>
+            </div>
+
+            <!-- Tab Content Areas -->
+            <div class="tab-content-area">
+
+                <!-- Verification Detail Tab -->
+                <div id="verification-tab" class="tab-content active">
+                    <div class="verification-box"
+                        style="background: white; border: 1px solid #eaeaea; border-radius: 8px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <div class="form-title"
+                            style="font-family: 'Georgia', serif; font-size: 24px; font-weight: 700; margin-bottom: 5px;">
+                            User Profile</div>
+                        <div class="form-subtitle" style="color: #666; font-size: 13px; margin-bottom: 30px;">
+                            Update your personal and verification information here. Click save to create an account or
+                            update your profile.
+                        </div>
+
+                        <form method="POST" enctype="multipart/form-data" id="verification-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="update_verification" value="1">
+
+                            <!-- Row 1: Name and Phone -->
+                            <div class="form-row" style="display: flex; gap: 30px; margin-bottom: 25px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label
+                                        style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Full
+                                        Name</label>
+                                    <input type="text" name="full_name" value="{{ verification.full_name }}"
+                                        placeholder="Your full name" required
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label
+                                        style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Phone
+                                        Number</label>
+                                    <input type="text" name="phone_number" value="{{ verification.phone_number }}"
+                                        placeholder="Your phone number" required
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                </div>
+                            </div>
+
+                            <!-- Row 2: DOB and Gender -->
+                            <div class="form-row" style="display: flex; gap: 30px; margin-bottom: 25px;">
+                                <div class="form-group" style="flex: 1; position: relative;">
+                                    <label
+                                        style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Date
+                                        of Birth</label>
+                                    <input type="date" name="dob" id="dob-input"
+                                        value="{{ verification.dob|date:'Y-m-d' }}" required
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;"
+                                        onchange="updateUniqueNumber()">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label
+                                        style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Gender</label>
+                                    <select name="gender" required
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px; appearance: none;">
+                                        <option value="" hidden>Select Gender</option>
+                                        <option value="Male" {% if verification.gender=='Male' %}selected{% endif %}>
+                                            Male</option>
+                                        <option value="Female" {% if verification.gender=='Female' %}selected{% endif
+                                            %}>Female</option>
+                                        <option value="Other" {% if verification.gender=='Other' %}selected{% endif %}>
+                                            Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Gmail (Read-only) -->
+                            <div class="form-group" style="margin-bottom: 25px;">
+                                <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Email
+                                    Address</label>
+                                <input type="text" value="{{ request.user.email }}" readonly
+                                    placeholder="Filled when you log in"
+                                    style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; color: #888; font-size: 14px;">
+                            </div>
+
+                            <!-- Row 4: Additional Gmail -->
+                            <div class="form-group" style="margin-bottom: 25px;">
+                                <label
+                                    style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Additional
+                                    Email Address</label>
+                                <input type="email" name="additional_email"
+                                    value="{{ verification.additional_email|default:'' }}"
+                                    placeholder="Your secondary email"
+                                    style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                            </div>
+
+                            <!-- Row 5: Unique Number -->
+                            <div class="form-group" style="margin-bottom: 25px;">
+                                <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Unique
+                                    Number</label>
+                                <input type="text" id="unique-number-display" value="{{ verification.unique_number }}"
+                                    readonly placeholder="Auto-generated from DOB"
+                                    style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; color: #2e7d32; font-weight: 600; font-size: 14px;">
+                            </div>
+
+                            <!-- Highest Qualification -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Highest
+                                    Qualification</label>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" name="highest_qual_desc"
+                                        value="{{ verification.highest_qual_desc }}" placeholder="e.g., B.A, M.Sc, PhD"
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                    <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                        onclick="document.getElementById('highest_qual_file').click()">
+                                        <span style="font-size: 13px; color: #666;">Upload Highest Qualification
+                                            (PDF/Image)</span>
+                                        <input type="file" id="highest_qual_file" name="highest_qual_file"
+                                            accept=".pdf,image/*" style="display: none;"
+                                            onchange="updateFileName(this, 'highest_qual_filename')">
+                                        <div id="highest_qual_filename"
+                                            style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                            {% if verification.highest_qual_file %}
+                                            Current: {{ verification.highest_qual_file.name }}
+                                            <a href="{{ verification.highest_qual_file.url }}" target="_blank"
+                                                style="margin-left: 10px; color: #1976d2; text-decoration: none; font-weight: 500;">View</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Certificate in Education -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Certificate
+                                    in Education</label>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" name="edu_cert_desc" value="{{ verification.edu_cert_desc }}"
+                                        placeholder="e.g., B.Ed, M.Ed"
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                    <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                        onclick="document.getElementById('edu_cert_file').click()">
+                                        <span style="font-size: 13px; color: #666;">Upload Certificate
+                                            (PDF/Image)</span>
+                                        <input type="file" id="edu_cert_file" name="edu_cert_file" accept=".pdf,image/*"
+                                            style="display: none;" onchange="updateFileName(this, 'edu_cert_filename')">
+                                        <div id="edu_cert_filename"
+                                            style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                            {% if verification.edu_cert_file %}
+                                            Current: {{ verification.edu_cert_file.name }}
+                                            <a href="{{ verification.edu_cert_file.url }}" target="_blank"
+                                                style="margin-left: 10px; color: #1976d2; text-decoration: none; font-weight: 500;">View</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Year of Experience -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Year
+                                    of Experience</label>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" name="exp_desc" value="{{ verification.exp_desc }}"
+                                        placeholder="e.g., 2 Years at XYZ School"
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                    <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                        onclick="document.getElementById('exp_file').click()">
+                                        <span style="font-size: 13px; color: #666;">Upload Experience Doc
+                                            (PDF/Image)</span>
+                                        <input type="file" id="exp_file" name="exp_file" accept=".pdf,image/*"
+                                            style="display: none;" onchange="updateFileName(this, 'exp_filename')">
+                                        <div id="exp_filename"
+                                            style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                            {% if verification.exp_file %}
+                                            Current: {{ verification.exp_file.name }}
+                                            <a href="{{ verification.exp_file.url }}" target="_blank"
+                                                style="margin-left: 10px; color: #1976d2; text-decoration: none; font-weight: 500;">View</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Expected Salary -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Expected
+                                    Salary</label>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" name="expected_salary" value="{{ verification.expected_salary }}"
+                                        placeholder="e.g., 30,000 / month"
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                    <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                        onclick="document.getElementById('salary_statement_file').click()">
+                                        <span style="font-size: 13px; color: #666;">Upload Bank Statement
+                                            (PDF/Image)</span>
+                                        <input type="file" id="salary_statement_file" name="salary_statement_file"
+                                            accept=".pdf,image/*" style="display: none;"
+                                            onchange="updateFileName(this, 'salary_filename')">
+                                        <div id="salary_filename"
+                                            style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                            {% if verification.salary_statement_file %}
+                                            Current: {{ verification.salary_statement_file.name }}
+                                            <a href="{{ verification.salary_statement_file.url }}" target="_blank"
+                                                style="margin-left: 10px; color: #1976d2; text-decoration: none; font-weight: 500;">View</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Upload Resume -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Upload
+                                    Resume</label>
+                                <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                    onclick="document.getElementById('resume').click()">
+                                    <span style="font-size: 13px; color: #666;">Upload Resume (PDF/Image)</span>
+                                    <input type="file" id="resume" name="resume" accept=".pdf,image/*"
+                                        style="display: none;" onchange="updateFileName(this, 'resume_filename')">
+                                    <div id="resume_filename" style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                        {% if verification.resume %}
+                                        Current: {{ verification.resume.name }}
+                                        <a href="{{ verification.resume.url }}" target="_blank"
+                                            style="margin-left: 10px; color: #1976d2; text-decoration: none; font-weight: 500;">View</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="overflow: hidden; margin-top: 40px;">
+                                <button type="submit" class="btn-save hover-lift-strong"
+                                    style="background: #111; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; float: right;">
+                                    Save Profile
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <script>
+                    function updateUniqueNumber() {
+                        const dobInput = document.getElementById('dob-input');
+                        const display = document.getElementById('unique-number-display');
+                        if (dobInput.value) {
+                            const date = new Date(dobInput.value);
+                            const day = date.getDate();
+                            const year = date.getFullYear();
+                            display.value = day + '' + year;
+                        }
+                    }
+
+                    function updateFileName(input, targetId) {
+                        const filename = input.files[0] ? input.files[0].name : 'No file chosen';
+                        document.getElementById(targetId).textContent = 'Selected: ' + filename;
+                    }
+                </script>
+
+                <!-- Applied Vacancy Tab -->
+                <div id="applied-tab" class="tab-content">
+                    <h2>Applied Vacancy</h2>
+                    {% if applied_vacancies %}
+                    <div class="vacancy-list">
+                        {% for app in applied_vacancies %}
+                        <div class="vacancy-item"
+                            onclick="window.location.href='{% url 'vacancy_detail_view' app.vacancy_post.vacancy.institute.state app.vacancy_post.vacancy.institute.district app.vacancy_post.vacancy.institute.name app.vacancy_post.subject %}?category={{ app.vacancy_post.vacancy.institute.category }}&type={{ app.vacancy_post.category }}&from=dashboard'">
+                            <div class="vacancy-header">
+                                <h3>{{ app.vacancy_post.vacancy.institute.name }}</h3>
+                                <span class="vacancy-date">{{ app.applied_at|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="vacancy-details">
+                                <span class="vacancy-subject">{{ app.vacancy_post.subject }}</span>
+                                <span class="vacancy-category">{{ app.vacancy_post.get_category_display }}</span>
+                                <span class="vacancy-location">{{ app.vacancy_post.vacancy.institute.district }}, {{
+                                    app.vacancy_post.vacancy.institute.state }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="color: #999;">You haven't applied to any vacancies yet.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Pending Vacancy Tab -->
+                <div id="pending-tab" class="tab-content">
+                    <h2>Pending Vacancy</h2>
+                    {% if saved_vacancies %}
+                    <div class="vacancy-list">
+                        {% for app in saved_vacancies %}
+                        <div class="vacancy-item"
+                            onclick="window.location.href='{% url 'vacancy_detail_view' app.vacancy_post.vacancy.institute.state app.vacancy_post.vacancy.institute.district app.vacancy_post.vacancy.institute.name app.vacancy_post.subject %}?category={{ app.vacancy_post.vacancy.institute.category }}&type={{ app.vacancy_post.category }}&from=dashboard'">
+                            <div class="vacancy-header">
+                                <h3>{{ app.vacancy_post.vacancy.institute.name }}</h3>
+                                <span class="vacancy-date">{{ app.applied_at|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="vacancy-details">
+                                <span class="vacancy-subject">{{ app.vacancy_post.subject }}</span>
+                                <span class="vacancy-category">{{ app.vacancy_post.get_category_display }}</span>
+                                <span class="vacancy-location">{{ app.vacancy_post.vacancy.institute.district }}, {{
+                                    app.vacancy_post.vacancy.institute.state }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="color: #999;">You haven't saved any vacancies yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <style>
+                /* Highlight User Dashboard in header */
+                .btn-header[href*="user-dashboard"] {
+                    background-color: #f0f0f0;
+                    border-color: #333;
+                    font-weight: 600;
+                }
+
+                .dashboard-layout {
+                    display: flex;
+                    gap: 0;
+                    min-height: calc(100vh - 100px);
+                    max-width: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                .sidebar {
+                    width: 180px;
+                    padding: 30px 20px;
+                    background: #f8f8f8;
+                    flex-shrink: 0;
+                }
+
+                .back-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 8px 16px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 4px;
+                    background: white;
+                    color: #333;
+                    text-decoration: none;
+                    font-size: 13px;
+                    transition: all 0.3s ease;
+                }
+
+                .back-btn:hover {
+                    background: rgba(0, 0, 0, 0.30);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+
+                .dashboard-title {
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: #000;
+                    margin: 0;
+                    line-height: 1.3;
+                }
+
+                .main-content {
+                    flex: 1;
+                    padding: 30px;
+                    background: white;
+                }
+
+                .tab-container {
+                    background: white;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    height: 100%;
+                }
+
+                .tab-nav {
+                    display: flex;
+                    border-bottom: 1px solid #e0e0e0;
+                    background: #f8f8f8;
+                }
+
+                .tab-btn {
+                    flex: 1;
+                    padding: 18px 20px;
+                    background: transparent;
+                    border: none;
+                    border-bottom: 3px solid transparent;
+                    font-size: 15px;
+                    font-weight: 500;
+                    color: #666;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .tab-btn:hover:not(.active) {
+                    background: rgba(0, 0, 0, 0.30);
+                    color: #333;
+                    transform: translateY(-2px);
+                }
+
+                .tab-btn.active {
+                    color: #000;
+                    font-weight: 600;
+                    border-bottom-color: #000;
+                    background: white;
+                }
+
+                .tab-content-area {
+                    padding: 40px;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                    scrollbar-color: #333 #f1f1f1;
+                }
+
+                .tab-content-area::-webkit-scrollbar {
+                    width: 6px;
+                }
+
+                .tab-content-area::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                }
+
+                .tab-content-area::-webkit-scrollbar-thumb {
+                    background: #333;
+                    border-radius: 10px;
+                }
+
+                .tab-content {
+                    display: none;
+                }
+
+                .tab-content.active {
+                    display: block;
+                }
+
+                .tab-content h2 {
+                    font-size: 20px;
+                    font-weight: 600;
+                    margin-bottom: 20px;
+                    color: #000;
+                }
+
+                .tab-content p {
+                    color: #666;
+                    font-size: 14px;
+                }
+
+                .vacancy-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                    margin-top: 20px;
+                }
+
+                .vacancy-item {
+                    background: #f8f8f8;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 6px;
+                    padding: 20px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .vacancy-item:hover {
+                    background: rgba(0, 0, 0, 0.30);
+                    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+                    transform: translateY(-4px);
+                }
+
+                .vacancy-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 12px;
+                }
+
+                .vacancy-header h3 {
+                    margin: 0;
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #000;
+                }
+
+                .vacancy-date {
+                    font-size: 12px;
+                    color: #999;
+                }
+
+                .vacancy-details {
+                    display: flex;
+                    gap: 15px;
+                    flex-wrap: wrap;
+                }
+
+                .vacancy-subject {
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #333;
+                }
+
+                .vacancy-category {
+                    font-size: 13px;
+                    color: #666;
+                    background: #e8e8e8;
+                    padding: 4px 10px;
+                    border-radius: 4px;
+                }
+
+                .vacancy-location {
+                    font-size: 13px;
+                    color: #666;
+                }
+            </style>
+
+            <script>
+                function switchTab(tabName, event) {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+                    // Add active class to clicked tab or the one found by name
+                    if (event) {
+                        event.target.classList.add('active');
+                    } else {
+                        const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick').includes(tabName));
+                        if (targetBtn) targetBtn.classList.add('active');
+                    }
+
+                    // Show corresponding content
+                    const targetContent = document.getElementById(tabName + '-tab');
+                    if (targetContent) targetContent.classList.add('active');
+
+                    // Update URL hash
+                    history.replaceState(null, null, '#' + tabName);
+                }
+
+                // Handle initial hash on load
+                window.addEventListener('load', function () {
+                    const hash = window.location.hash.substring(1);
+                    if (hash && ['verification', 'applied', 'pending', 'chat'].includes(hash)) {
+                        switchTab(hash);
+                    }
+                });
+            </script>
+        </div>
+    </div>
+</div>
+{% endblock %}

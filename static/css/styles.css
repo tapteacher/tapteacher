@@ -1,0 +1,310 @@
+/* Global Resets */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+    /* Force full height */
+    overflow: hidden;
+    /* Prevent body scroll */
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f8f9fa;
+    /* Light grey background */
+    color: #333;
+    display: flex;
+    flex-direction: column;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Header - Fixed Height */
+.main-header {
+    background-color: #fff;
+    padding: 15px 30px;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    /* Never shrink */
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left,
+.header-right {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-header {
+    border: 1px solid #e0e0e0;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #333;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.btn-header:hover {
+    background-color: rgba(0, 0, 0, 0.30);
+    /* Soft black overlay */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Main Container - Takes remaining space */
+.main-container {
+    padding: 20px 30px 40px 30px;
+    flex-grow: 1;
+    /* Fill remaining vertical space */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Prevent internal scroll of container */
+}
+
+/* Page Title - Fixed Height */
+.page-title-section {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto 20px auto;
+    /* Reduced margin */
+    flex-shrink: 0;
+}
+
+.page-title-section h1 {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+/* Content Wrapper - Takes remaining space below title */
+.content-wrapper {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    gap: 30px;
+    flex-grow: 1;
+    /* Fill remaining vertical space */
+    overflow: hidden;
+    /* Ensure children handle their own scroll/sizing */
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: 100%;
+    /* Fill wrapper height */
+}
+
+.sidebar-item {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 15px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    /* Use flex to distribute height evenly */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.sidebar-item.active {
+    border: 2px solid #000;
+    /* Distinct active border */
+    font-weight: 700;
+}
+
+.sidebar-item:hover {
+    background-color: rgba(0, 0, 0, 0.30) !important;
+    /* Soft black overlay */
+    transform: translateY(-3px);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
+}
+
+.sidebar-main-text {
+    font-size: 16px;
+    color: #000;
+    margin-bottom: 4px;
+    font-weight: 700;
+}
+
+.sidebar-sub-text {
+    font-size: 13px;
+    color: #666;
+    font-weight: 400;
+}
+
+/* Main Display */
+.main-display {
+    flex-grow: 1;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 30px;
+    display: flex;
+    /* Flex column to manage header + grid */
+    flex-direction: column;
+    height: 100%;
+    /* Fill wrapper height */
+}
+
+.main-display-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.main-display-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.btn-home {
+    background-color: #212529;
+    /* Dark button */
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-home:hover {
+    background-color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Location Grid - Takes remaining space in Main Display */
+.location-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Two columns */
+    gap: 15px;
+    overflow-y: auto;
+    /* Enable vertical scrolling */
+    flex-grow: 1;
+    /* Fill remaining space */
+    padding-right: 10px;
+    /* Space for scrollbar */
+    align-content: start;
+    /* Don't stretch rows */
+}
+
+.location-card {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    font-size: 14px;
+    color: #333;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    height: max-content;
+    /* Don't stretch */
+}
+
+.location-card:hover {
+    background-color: rgba(0, 0, 0, 0.30);
+    /* Soft black overlay */
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Blinking Animation */
+@keyframes blink-red {
+    0% {
+        background-color: inherit;
+        border-color: inherit;
+    }
+
+    50% {
+        background-color: #ffe6e6;
+        border-color: #ff4444;
+    }
+
+    100% {
+        background-color: inherit;
+        border-color: inherit;
+    }
+}
+
+.blink-red {
+    animation: blink-red 1.5s infinite;
+}
+
+/* ========================================
+   GLOBAL HOVER EFFECTS
+   ======================================== */
+
+/* Standard Lift Effect - For cards and medium-sized buttons */
+.hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Subtle Lift Effect - For smaller elements and secondary actions */
+.hover-lift-subtle {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift-subtle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Strong Lift Effect - For primary action buttons */
+.hover-lift-strong {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift-strong:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Darkening Effect - For buttons and cards that need visible background change */
+.hover-darken {
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.hover-darken:hover {
+    background-color: #f0f0f0 !important;
+    border-color: #ccc !important;
+}

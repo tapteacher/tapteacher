@@ -1,0 +1,746 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="dashboard-layout">
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+        {% if is_admin_viewing %}
+        <a href="{% url 'admin_dashboard' %}" class="back-btn"
+            style="background:#111; color:white; border-color:#111; margin-bottom: 10px;">
+            Admin Dashboard
+        </a>
+        <a href="{% url 'syllabus_landing' %}?view_as={{ target_user.id }}" class="back-btn"
+            style="background:#111; color:white; border-color:#111; margin-bottom: 10px;">
+            Manage User Syllabus
+        </a>
+        {% endif %}
+        <a href="{% url 'home' %}" class="back-btn">
+            ← Back to Home
+        </a>
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="main-content">
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('verification')">
+                    {% if verification.full_name %}
+                    {{ verification.full_name }}'s Dashboard
+                    {% else %}
+                    User Dashboard
+                    {% endif %}
+                </button>
+                <button class="tab-btn" onclick="switchTab('applied')">Applied Vacancy ({{ applied_count }})</button>
+                <button class="tab-btn" onclick="switchTab('pending')">Pending Vacancy ({{ saved_count }})</button>
+                <button class="tab-btn {% if unread_chat_count > 0 %}blink-red{% endif %}"
+                    onclick="switchTab('chat', event)">Chat with Team</button>
+            </div>
+
+            <!-- Tab Content Areas -->
+            <div class="tab-content-area">
+
+                <!-- Verification Detail Tab -->
+                <div id="verification-tab" class="tab-content active">
+                    <div class="verification-box"
+                        style="background: white; border: 1px solid #eaeaea; border-radius: 8px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <div class="form-title"
+                            style="font-family: 'Georgia', serif; font-size: 24px; font-weight: 700; margin-bottom: 5px;">
+                            User Profile</div>
+                        <div class="form-subtitle" style="color: #666; font-size: 13px; margin-bottom: 30px;">
+                            Update your personal and verification information here. Click save to create an account or
+                            update your profile.
+                        </div>
+
+                        <form method="POST" enctype="multipart/form-data" id="verification-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="update_verification" value="1">
+
+                            <!-- Row 1: Name and Phone -->
+                            <div class="form-row" style="display: flex; gap: 30px; margin-bottom: 25px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label
+                                        style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Full
+                                        Name</label>
+                                    <input type="text" name="full_name" value="{{ verification.full_name }}"
+                                        placeholder="Your full name" required
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label
+                                        style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Phone
+                                        Number</label>
+                                    <input type="text" name="phone_number" value="{{ verification.phone_number }}"
+                                        placeholder="Your phone number" required
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                </div>
+                            </div>
+
+                            <!-- Row 2: DOB and Gender -->
+                            <div class="form-row" style="display: flex; gap: 30px; margin-bottom: 25px;">
+                                <div class="form-group" style="flex: 1; position: relative;">
+                                    <label
+                                        style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Date
+                                        of Birth</label>
+                                    <input type="date" name="dob" id="dob-input"
+                                        value="{{ verification.dob|date:'Y-m-d' }}" required
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;"
+                                        onchange="updateUniqueNumber()">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label
+                                        style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Gender</label>
+                                    <select name="gender" required
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px; appearance: none;">
+                                        <option value="" hidden>Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Gmail (Read-only) -->
+                            <div class="form-group" style="margin-bottom: 25px;">
+                                <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Email
+                                    Address</label>
+                                <input type="text" value="{{ request.user.email }}" readonly
+                                    placeholder="Filled when you log in"
+                                    style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; color: #888; font-size: 14px;">
+                            </div>
+
+                            <!-- Row 4: Additional Gmail -->
+                            <div class="form-group" style="margin-bottom: 25px;">
+                                <label
+                                    style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Additional
+                                    Email Address</label>
+                                <input type="email" name="additional_email"
+                                    value="{{ verification.additional_email|default:'' }}"
+                                    placeholder="Your secondary email"
+                                    style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                            </div>
+
+                            <!-- Row 5: Unique Number -->
+                            <div class="form-group" style="margin-bottom: 25px;">
+                                <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Unique
+                                    Number</label>
+                                <input type="text" id="unique-number-display" value="{{ verification.unique_number }}"
+                                    readonly placeholder="Auto-generated from DOB"
+                                    style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; color: #2e7d32; font-weight: 600; font-size: 14px;">
+                            </div>
+
+                            <!-- Highest Qualification -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Highest
+                                    Qualification</label>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" name="highest_qual_desc"
+                                        value="{{ verification.highest_qual_desc }}" placeholder="e.g., B.A, M.Sc, PhD"
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                    <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                        onclick="document.getElementById('highest_qual_file').click()">
+                                        <span style="font-size: 13px; color: #666;">Upload Highest Qualification
+                                            (PDF/Image)</span>
+                                        <input type="file" id="highest_qual_file" name="highest_qual_file"
+                                            accept=".pdf,image/*" style="display: none;"
+                                            onchange="updateFileName(this, 'highest_qual_filename')">
+                                        <div id="highest_qual_filename"
+                                            style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                            {% if verification.highest_qual_file %}
+                                            Current: {{ verification.highest_qual_file.name }}
+                                            <a href="{{ verification.highest_qual_file.url }}" target="_blank"
+                                                onclick="event.stopPropagation();"
+                                                style="display: inline-block; margin-left: 10px; padding: 6px 16px; background-color: #e3f2fd; color: #1976d2; text-decoration: none; font-weight: 600; border-radius: 4px; border: 1px solid #bbdefb; font-size: 13px;">view</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Certificate in Education -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Certificate
+                                    in Education</label>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" name="edu_cert_desc" value="{{ verification.edu_cert_desc }}"
+                                        placeholder="e.g., B.Ed, M.Ed"
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                    <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                        onclick="document.getElementById('edu_cert_file').click()">
+                                        <span style="font-size: 13px; color: #666;">Upload Certificate
+                                            (PDF/Image)</span>
+                                        <input type="file" id="edu_cert_file" name="edu_cert_file" accept=".pdf,image/*"
+                                            style="display: none;" onchange="updateFileName(this, 'edu_cert_filename')">
+                                        <div id="edu_cert_filename"
+                                            style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                            {% if verification.edu_cert_file %}
+                                            Current: {{ verification.edu_cert_file.name }}
+                                            <a href="{{ verification.edu_cert_file.url }}" target="_blank"
+                                                onclick="event.stopPropagation();"
+                                                style="display: inline-block; margin-left: 10px; padding: 6px 16px; background-color: #e3f2fd; color: #1976d2; text-decoration: none; font-weight: 600; border-radius: 4px; border: 1px solid #bbdefb; font-size: 13px;">view</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Year of Experience -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Year
+                                    of Experience</label>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" name="exp_desc" value="{{ verification.exp_desc }}"
+                                        placeholder="e.g., 2 Years at XYZ School"
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                    <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                        onclick="document.getElementById('exp_file').click()">
+                                        <span style="font-size: 13px; color: #666;">Upload Experience Doc
+                                            (PDF/Image)</span>
+                                        <input type="file" id="exp_file" name="exp_file" accept=".pdf,image/*"
+                                            style="display: none;" onchange="updateFileName(this, 'exp_filename')">
+                                        <div id="exp_filename"
+                                            style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                            {% if verification.exp_file %}
+                                            Current: {{ verification.exp_file.name }}
+                                            <a href="{{ verification.exp_file.url }}" target="_blank"
+                                                onclick="event.stopPropagation();"
+                                                style="display: inline-block; margin-left: 10px; padding: 6px 16px; background-color: #e3f2fd; color: #1976d2; text-decoration: none; font-weight: 600; border-radius: 4px; border: 1px solid #bbdefb; font-size: 13px;">view</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Expected Salary -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Expected
+                                    Salary</label>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <input type="text" name="expected_salary" value="{{ verification.expected_salary }}"
+                                        placeholder="e.g., 30,000 / month"
+                                        style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
+                                    <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                        onclick="document.getElementById('salary_statement_file').click()">
+                                        <span style="font-size: 13px; color: #666;">Upload Bank Statement
+                                            (PDF/Image)</span>
+                                        <input type="file" id="salary_statement_file" name="salary_statement_file"
+                                            accept=".pdf,image/*" style="display: none;"
+                                            onchange="updateFileName(this, 'salary_filename')">
+                                        <div id="salary_filename"
+                                            style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                            {% if verification.salary_statement_file %}
+                                            Current: {{ verification.salary_statement_file.name }}
+                                            <a href="{{ verification.salary_statement_file.url }}" target="_blank"
+                                                onclick="event.stopPropagation();"
+                                                style="display: inline-block; margin-left: 10px; padding: 6px 16px; background-color: #e3f2fd; color: #1976d2; text-decoration: none; font-weight: 600; border-radius: 4px; border: 1px solid #bbdefb; font-size: 13px;">view</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Upload Resume -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Upload
+                                    Resume</label>
+                                <div style="border: 1px dashed #ccc; padding: 20px; border-radius: 8px; background: #fff; text-align: center; cursor: pointer;"
+                                    onclick="document.getElementById('resume').click()">
+                                    <span style="font-size: 13px; color: #666;">Upload Resume (PDF/Image)</span>
+                                    <input type="file" id="resume" name="resume" accept=".pdf,image/*"
+                                        style="display: none;" onchange="updateFileName(this, 'resume_filename')">
+                                    <div id="resume_filename" style="font-size: 11px; color: #2e7d32; margin-top: 5px;">
+                                        {% if verification.resume %}
+                                        Current: {{ verification.resume.name }}
+                                        <a href="{{ verification.resume.url }}" target="_blank"
+                                            onclick="event.stopPropagation();"
+                                            style="display: inline-block; margin-left: 10px; padding: 6px 16px; background-color: #e3f2fd; color: #1976d2; text-decoration: none; font-weight: 600; border-radius: 4px; border: 1px solid #bbdefb; font-size: 13px;">view</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="overflow: hidden; margin-top: 40px;">
+                                <button type="submit" class="btn-save hover-lift-strong"
+                                    style="background: #111; color: white; border: none; padding: 14px 40px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; float: right;">
+                                    Save Profile
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <script>
+                    function updateUniqueNumber() {
+                        const dobInput = document.getElementById('dob-input');
+                        const display = document.getElementById('unique-number-display');
+                        if (dobInput.value) {
+                            const date = new Date(dobInput.value);
+                            const day = date.getDate();
+                            const year = date.getFullYear();
+                            display.value = day + '' + year;
+                        }
+                    }
+
+                    function updateFileName(input, targetId) {
+                        const filename = input.files[0] ? input.files[0].name : 'No file chosen';
+                        document.getElementById(targetId).textContent = 'Selected: ' + filename;
+                    }
+                </script>
+
+                <!-- Applied Vacancy Tab -->
+                <div id="applied-tab" class="tab-content">
+                    <h2>Applied Vacancy</h2>
+                    {% if applied_vacancies %}
+                    <div class="vacancy-list">
+                        {% for app in applied_vacancies %}
+                        <div class="vacancy-item"
+                            onclick="window.location.href='{% url 'vacancy_detail_view' app.vacancy_post.vacancy.institute.state app.vacancy_post.vacancy.institute.district app.vacancy_post.vacancy.institute.name app.vacancy_post.subject %}?category={{ app.vacancy_post.vacancy.institute.category }}&type={{ app.vacancy_post.category }}&from=dashboard'">
+                            <div class="vacancy-header">
+                                <h3>{{ app.vacancy_post.vacancy.institute.name }}</h3>
+                                <span class="vacancy-date">{{ app.applied_at|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="vacancy-details">
+                                <span class="vacancy-subject">{{ app.vacancy_post.subject }}</span>
+                                <span class="vacancy-category">{{ app.vacancy_post.get_category_display }}</span>
+                                {% with inst=app.vacancy_post.vacancy.institute %}
+                                <span class="vacancy-location">{{ inst.district }}, {{ inst.state }}</span>
+                                {% endwith %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="color: #999;">You haven't applied to any vacancies yet.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Pending Vacancy Tab -->
+                <div id="pending-tab" class="tab-content">
+                    <h2>Pending Vacancy</h2>
+                    {% if saved_vacancies %}
+                    <div class="vacancy-list">
+                        {% for app in saved_vacancies %}
+                        <div class="vacancy-item"
+                            onclick="window.location.href='{% url 'vacancy_detail_view' app.vacancy_post.vacancy.institute.state app.vacancy_post.vacancy.institute.district app.vacancy_post.vacancy.institute.name app.vacancy_post.subject %}?category={{ app.vacancy_post.vacancy.institute.category }}&type={{ app.vacancy_post.category }}&from=dashboard'">
+                            <div class="vacancy-header">
+                                <h3>{{ app.vacancy_post.vacancy.institute.name }}</h3>
+                                <span class="vacancy-date">{{ app.applied_at|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="vacancy-details">
+                                <span class="vacancy-subject">{{ app.vacancy_post.subject }}</span>
+                                <span class="vacancy-category">{{ app.vacancy_post.get_category_display }}</span>
+                                {% with inst=app.vacancy_post.vacancy.institute %}
+                                <span class="vacancy-location">{{ inst.district }}, {{ inst.state }}</span>
+                                {% endwith %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="color: #999;">You haven't saved any vacancies yet.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Chat with Team Tab -->
+                <div id="chat-tab" class="tab-content">
+                    <h2>Chat with Team</h2>
+
+                    {% load static %}
+                    <div
+                        style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
+                        <!-- Messages Container -->
+                        <!-- Messages Container -->
+                        <div id="user-messages-container"
+                            style="height: 50vh; min-height: 400px; overflow-y: auto; padding: 20px; background: #f9f9f9;">
+                            {% if user_messages %}
+                            {% for msg in user_messages %}
+                            <div
+                                style="margin-bottom: 20px; display: flex; {% if msg.sender_is_admin %}justify-content: flex-start;{% else %}justify-content: flex-end;{% endif %}">
+                                <div
+                                    style="max-width: 70%; {% if msg.sender_is_admin %}background: white;{% else %}background: #e8e8e8;{% endif %} color: #333; padding: 12px 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                    {% if msg.message_text %}
+                                    <p style="margin: 0; word-wrap: break-word;">{{ msg.message_text }}</p>
+                                    {% endif %}
+
+                                    {% if msg.attachment %}
+                                    <div style="margin-top: {% if msg.message_text %}10px{% else %}0{% endif %};">
+                                        {% if msg.attachment_type == 'image' %}
+                                        <div style="position: relative; display: inline-block;">
+                                            <a href="{{ msg.attachment.url }}" target="_blank">
+                                                <img src="{{ msg.attachment.url }}" alt="Attachment"
+                                                    style="max-width: 100%; border-radius: 8px; display: block; max-height: 200px; object-fit: contain;">
+                                            </a>
+                                            <a href="{{ msg.attachment.url }}" download
+                                                style="display: block; margin-top: 4px; font-size: 12px; color: #333; text-decoration: underline; text-align: right;">Download</a>
+                                        </div>
+                                        {% else %}
+                                        <a href="{{ msg.attachment.url }}" download
+                                            style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f5f5f5; border-radius: 6px; text-decoration: none; color: #333; max-width: 100%;">
+                                            <span>📎</span>
+                                            <span
+                                                style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{
+                                                msg.attachment_filename }}</span>
+                                            <span style="color: #666; font-size: 14px;">⬇</span>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
+                                    <p style="margin: 8px 0 0 0; font-size: 11px; opacity: 0.7;">
+                                        {{ msg.created_at|date:"M d, Y H:i" }}
+                                        {% if msg.sender_is_admin %}<span style="margin-left: 5px;">(Team)</span>{% else
+                                        %}<span style="margin-left: 5px;">(You)</span>{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <div style="text-align: center; padding: 60px 20px; color: #999;">
+                                <p style="margin: 0; font-size: 16px;">No messages yet</p>
+                                <p style="margin-top: 10px;">Start a conversation with our team below</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Message Input Form -->
+                        <form method="POST" action="{% url 'user_send_message' %}" enctype="multipart/form-data"
+                            style="padding: 20px; background: white; border-top: 1px solid #eee; margin-bottom: 20px;">
+                            {% csrf_token %}
+
+                            <div style="margin-bottom: 15px;">
+                                <textarea name="message_text" placeholder="Type your message here..."
+                                    style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <label class="hover-lift-subtle"
+                                        style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: #f5f5f5; border-radius: 6px; cursor: pointer;">
+                                        <span>📎</span>
+                                        <span id="file-label">Attach File</span>
+                                        <input type="file" name="attachment"
+                                            accept=".pdf,.jpg,.jpeg,.png,.gif,.ppt,.pptx" style="display: none;"
+                                            onchange="document.getElementById('file-label').textContent = this.files[0] ? this.files[0].name : 'Attach File'">
+                                    </label>
+                                    <span style="font-size: 12px; color: #999;">PDF, Images, PPT (Max 10MB)</span>
+                                </div>
+
+                                <button type="submit" class="hover-lift-subtle"
+                                    style="padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: 600;">
+                                    Send Message
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                /* Highlight User Dashboard in header */
+                .btn-header[href*="user-dashboard"] {
+                    background-color: #f0f0f0;
+                    border-color: #333;
+                    font-weight: 600;
+                }
+
+                .dashboard-layout {
+                    display: flex;
+                    gap: 0;
+                    min-height: calc(100vh - 100px);
+                    max-width: 100%;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                .sidebar {
+                    width: 180px;
+                    padding: 30px 20px;
+                    background: #f8f8f8;
+                    flex-shrink: 0;
+                }
+
+                .back-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 8px 16px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 4px;
+                    background: white;
+                    color: #333;
+                    text-decoration: none;
+                    font-size: 13px;
+                    transition: all 0.3s ease;
+                }
+
+                .back-btn:hover {
+                    background: rgba(0, 0, 0, 0.30);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+
+                .dashboard-title {
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: #000;
+                    margin: 0;
+                    line-height: 1.3;
+                }
+
+                .main-content {
+                    flex: 1;
+                    padding: 30px;
+                    background: white;
+                }
+
+                .tab-container {
+                    background: white;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    height: 100%;
+                }
+
+                .tab-nav {
+                    display: flex;
+                    border-bottom: 1px solid #e0e0e0;
+                    background: #f8f8f8;
+                }
+
+                .tab-btn {
+                    flex: 1;
+                    padding: 18px 20px;
+                    background: transparent;
+                    border: none;
+                    border-bottom: 3px solid transparent;
+                    font-size: 15px;
+                    font-weight: 500;
+                    color: #666;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .tab-btn:hover:not(.active) {
+                    background: rgba(0, 0, 0, 0.30);
+                    color: #333;
+                    transform: translateY(-2px);
+                }
+
+                .tab-btn.active {
+                    color: #000;
+                    font-weight: 600;
+                    border-bottom-color: #000;
+                    background: white;
+                }
+
+                .tab-content-area {
+                    padding: 40px;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                    scrollbar-color: #333 #f1f1f1;
+                }
+
+                .tab-content-area::-webkit-scrollbar {
+                    width: 6px;
+                }
+
+                .tab-content-area::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                }
+
+                .tab-content-area::-webkit-scrollbar-thumb {
+                    background: #333;
+                    border-radius: 10px;
+                }
+
+                .tab-content {
+                    display: none;
+                }
+
+                .tab-content.active {
+                    display: block;
+                }
+
+                .tab-content h2 {
+                    font-size: 20px;
+                    font-weight: 600;
+                    margin-bottom: 20px;
+                    color: #000;
+                }
+
+                .tab-content p {
+                    color: #666;
+                    font-size: 14px;
+                }
+
+                .vacancy-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                    margin-top: 20px;
+                }
+
+                .vacancy-item {
+                    background: #f8f8f8;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 6px;
+                    padding: 20px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .vacancy-item:hover {
+                    background: rgba(0, 0, 0, 0.30);
+                    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+                    transform: translateY(-4px);
+                }
+
+                .vacancy-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 12px;
+                }
+
+                .vacancy-header h3 {
+                    margin: 0;
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #000;
+                }
+
+                .vacancy-date {
+                    font-size: 12px;
+                    color: #999;
+                }
+
+                .vacancy-details {
+                    display: flex;
+                    gap: 15px;
+                    flex-wrap: wrap;
+                }
+
+                .vacancy-subject {
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #333;
+                }
+
+                .vacancy-category {
+                    font-size: 13px;
+                    color: #666;
+                    background: #e8e8e8;
+                    padding: 4px 10px;
+                    border-radius: 4px;
+                }
+
+                .vacancy-location {
+                    font-size: 13px;
+                    color: #666;
+                }
+
+                .blink-red {
+                    animation: blink-animation 1s infinite;
+                    background-color: #ffebee !important;
+                    color: #d32f2f !important;
+                    border-bottom-color: #d32f2f !important;
+                    font-weight: 600;
+                }
+
+                @keyframes blink-animation {
+                    0% {
+                        opacity: 1;
+                    }
+
+                    50% {
+                        opacity: 0.7;
+                        background-color: #ffcdd2;
+                    }
+
+                    100% {
+                        opacity: 1;
+                    }
+                }
+            </style>
+
+            <script>
+                function switchTab(tabName, event) {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+                    // Add active class to clicked tab or the one found by name
+                    let targetBtn;
+                    if (event) {
+                        targetBtn = event.target;
+                    } else {
+                        targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick').includes(tabName));
+                    }
+
+                    if (targetBtn) {
+                        targetBtn.classList.add('active');
+                        // Stop blinking if chat tab is clicked
+                        if (tabName === 'chat' && targetBtn.classList.contains('blink-red')) {
+                            targetBtn.classList.remove('blink-red');
+                            markChatRead();
+                        }
+                    }
+
+                    // Show corresponding content
+                    const targetContent = document.getElementById(tabName + '-tab');
+                    if (targetContent) targetContent.classList.add('active');
+
+                    // Auto-scroll chat messages to bottom when chat tab is opened
+                    if (tabName === 'chat') {
+                        setTimeout(() => {
+                            const chatContainer = document.getElementById('user-messages-container');
+                            if (chatContainer) {
+                                chatContainer.scrollTop = chatContainer.scrollHeight;
+                            }
+                        }, 100);
+
+                        // Also trigger read if we switched via hash/JS and it was blinking
+                        if (targetBtn && targetBtn.classList.contains('blink-red')) {
+                            targetBtn.classList.remove('blink-red');
+                            markChatRead();
+                        }
+                    }
+
+                    // Update URL hash
+                    history.replaceState(null, null, '#' + tabName);
+                }
+
+                function markChatRead() {
+                    fetch("{% url 'mark_chat_read' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Chat marked as read');
+                        })
+                        .catch(error => console.error('Error:', error));
+                }
+
+                // Handle initial hash on load
+                window.addEventListener('load', function () {
+                    const hash = window.location.hash.substring(1);
+                    if (hash && ['verification', 'applied', 'pending', 'chat'].includes(hash)) {
+                        switchTab(hash);
+                    }
+                });
+            </script>
+        </div>
+    </div>
+</div>
+{% endblock %}

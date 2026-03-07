@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ topic.title }} - TapTeacher</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: #fcfcfc;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #111;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .back-btn {
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 4px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .topic-content {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            padding: 30px;
+        }
+
+        .topic-header-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #111;
+        }
+
+        .topic-desc {
+            margin-bottom: 30px;
+            color: #555;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .attachments {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .attachment-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            background: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .attachment-link:hover {
+            border-color: #111;
+            background: #f9f9f9;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .topic-image {
+            margin-top: 20px;
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        /* Loading Indicator */
+        #download-loader {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #111;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">{{ subject.name }}</div>
+                <h1>{{ topic.title }}</h1>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                {% if request.user.is_superuser %}
+                <form
+                    action="{% url 'delete_topic' topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                    method="POST"
+                    onsubmit="return confirm('Are you sure you want to permanently delete this topic? This action cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit"
+                        style="background: #ff4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">Delete
+                        Topic</button>
+                </form>
+                {% endif %}
+                <a href="{% url 'syllabus_subject' category_slug=category.slug subject_id=subject.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                    class="back-btn">←
+                    Back to Topics</a>
+            </div>
+        </div>
+
+        <div class="topic-content">
+            <h2 class="topic-header-title">{{ topic.title }}</h2>
+
+            {% if topic.description %}
+            <div class="topic-desc">{{ topic.description|linebreaks }}</div>
+            {% endif %}
+
+            <div class="attachments">
+                {% if topic.ppt_file %}
+                <a href="{{ topic.ppt_file.url }}" class="attachment-link" target="_blank">
+                    📄 Download PPT (Original)
+                </a>
+                {% endif %}
+
+                {% if topic.pdf_file %}
+                <a href="{{ topic.pdf_file.url }}" class="attachment-link" target="_blank">
+                    📑 Download PDF (Original)
+                </a>
+                {% endif %}
+
+                {% for file in topic.files.all %}
+                <a href="{{ file.file.url }}" class="attachment-link" target="_blank">
+                    {% if file.file_type == 'ppt' %}PPT{% elif file.file_type == 'pdf' %}PDF{% else %}IMG{% endif %}
+                </a>
+                {% endfor %}
+            </div>
+
+            {% if topic.image %}
+            <img src="{{ topic.image.url }}" alt="Topic Image" class="topic-image">
+            {% endif %}
+
+            {% for file in topic.files.all %}
+            {% if file.file_type == 'image' %}
+            <img src="{{ file.file.url }}" alt="Attachment Image" class="topic-image">
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <div id="download-loader">
+            <div class="spinner"></div>
+            <div style="font-weight: 600; color: #111;">Opening file...</div>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">Please wait while the file loads.</div>
+        </div>
+
+    </div>
+
+    <script>
+        document.querySelectorAll('.attachment-link').forEach(link => {
+            link.addEventListener('click', function () {
+                const loader = document.getElementById('download-loader');
+                loader.style.display = 'block';
+
+                // Hide loader after 3 seconds (browser usually starts download by then)
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 3000);
+            });
+        });
+    </script>
+</body>
+
+</html>

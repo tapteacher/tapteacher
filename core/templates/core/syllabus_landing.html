@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vacancy Guidance - TapTeacher</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: #fcfcfc;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .category-card {
+            background: white;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+            padding: 20px 40px;
+            min-width: 150px;
+            text-align: center;
+            text-decoration: none;
+            color: #111;
+            font-weight: 500;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .category-card:hover {
+            border-color: #111;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            background-color: rgba(0, 0, 0, 0.30) !important;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Blink Animation */
+        @keyframes blink-red {
+            0% {
+                background-color: white;
+                border-color: #eaeaea;
+            }
+
+            50% {
+                background-color: #ffe6e6;
+                border-color: #ff4444;
+            }
+
+            100% {
+                background-color: white;
+                border-color: #eaeaea;
+            }
+        }
+
+        .blink-red {
+            animation: blink-red 1.5s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div style="text-align: left;">
+            <a href="{% url 'home' %}" class="back-btn">← Back to Home</a>
+        </div>
+
+        <div class="header">
+            <h1>Vacancy Guidance</h1>
+        </div>
+
+        <div class="category-grid">
+            <a href="{% url 'syllabus_category' 'prt' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                class="category-card {% if blink_prt %}blink-red{% endif %}">PRT Vacancy</a>
+            <a href="{% url 'syllabus_category' 'tgt' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                class="category-card {% if blink_tgt %}blink-red{% endif %}">TGT Vacancy</a>
+            <a href="{% url 'syllabus_category' 'pgt' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                class="category-card {% if blink_pgt %}blink-red{% endif %}">PGT Vacancy</a>
+            <a href="{% url 'syllabus_category' 'other' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                class="category-card {% if blink_other %}blink-red{% endif %}">Other Vacancy</a>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Vacancy - TapTeacher</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #fcfcfc;
+            color: #333;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #111;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: #f5f5f5;
+        }
+
+        .form-section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 20px 0 15px 0;
+            color: #111;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #444;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #f9f9f9;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .post-detail-box {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .post-title {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background: #111;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-add-post {
+            background: white;
+            border: 1px solid #e0e0e0;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="{% url 'admin_dashboard' %}" class="back-link">← Back to Dashboard</a>
+        <h1 style="margin-top: 0;">Edit Vacancy</h1>
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-section-title">Institute Details</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Institute Name *</label>
+                    <input type="text" name="institute_name" value="{{ vacancy.institute.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Job Category *</label>
+                    <select name="institute_category" required>
+                        <option value="govt" {% if vacancy.institute.category == 'govt' %}selected{% endif %}>Government
+                            School</option>
+                        <option value="semi" {% if vacancy.institute.category == 'semi' %}selected{% endif %}>
+                            Semi-Government School</option>
+                        <option value="private" {% if vacancy.institute.category == 'private' %}selected{% endif %}>
+                            Private School</option>
+                        <option value="coaching" {% if vacancy.institute.category == 'coaching' %}selected{% endif %}>
+                            Private Coaching & Tution</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>State/UT *</label>
+                    <select name="state" id="state-select" onchange="updateDistricts(this)" required>
+                        <option value="" hidden>Select State/UT</option>
+                        {% for state in india_data.keys %}
+                        <option value="{{ state }}" {% if vacancy.institute.state == state %}selected{% endif %}>{{ state                            }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>District *</label>
+                    <select id="district-select" name="district" required>
+                        <option value="{{ vacancy.institute.district }}">{{ vacancy.institute.district }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label>Application Link or Email</label>
+                <input type="text" name="application_link" value="{{ vacancy.application_link }}" required>
+            </div>
+
+            <div class="form-section-title">Our Belief</div>
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label>Description</label>
+                <textarea name="belief" rows="4">{{ vacancy.institute.belief }}</textarea>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div class="form-section-title" style="margin: 0;">Post Details</div>
+                <button type="button" class="btn-add-post" onclick="addPostBox()">+ Add Post</button>
+            </div>
+
+            <div id="posts-container">
+                {% for post in posts %}
+                <div class="post-detail-box" id="post-box-{{ forloop.counter }}">
+                    <div class="post-header">
+                        <div class="post-title">Post #{{ forloop.counter }}</div>
+                        <button type="button"
+                            style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:12px;"
+                            onclick="removePostBox({{ forloop.counter }})">Remove</button>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Post Category *</label>
+                            <select name="post_category[]" required>
+                                <option value="prt" {% if post.category == 'prt' %}selected{% endif %}>PRT</option>
+                                <option value="tgt" {% if post.category == 'tgt' %}selected{% endif %}>TGT</option>
+                                <option value="pgt" {% if post.category == 'pgt' %}selected{% endif %}>PGT</option>
+                                <option value="other" {% if post.category == 'other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Subject *</label>
+                            <input type="text" name="post_subject[]" value="{{ post.subject }}" required>
+                        </div>
+                    </div>
+                    <div style="font-size:15px; font-weight:600; margin: 20px 0 15px 0;">Requirements & Compensation
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Professional Qualification</label>
+                            <textarea name="post_qualification[]" rows="3">{{ post.qualification }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Total Compensation Package</label>
+                            <textarea name="post_compensation[]" rows="3">{{ post.compensation }}</textarea>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Eligibility Test</label>
+                            <textarea name="post_eligibility[]" rows="3">{{ post.eligibility }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Age Limit</label>
+                            <textarea name="post_age_limit[]" rows="3">{{ post.age_limit }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="margin-top: 30px; display: flex; gap: 15px;">
+                <button type="submit" class="btn-primary">Resubmit Vacancy</button>
+                <button type="button"
+                    onclick="if(confirm('Are you sure you want to delete this vacancy?')) document.getElementById('delete-form').submit();"
+                    style="background: #ffebee; color: #c62828; padding: 12px 25px; border: 1px solid #ffcdd2; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer;">Delete
+                    Vacancy</button>
+            </div>
+        </form>
+
+        <form id="delete-form" action="{% url 'delete_vacancy' vacancy.id %}" method="POST" style="display: none;">
+            {% csrf_token %}
+        </form>
+    </div>
+
+    <script>
+        const indiaData = {{ india_data| safe }};
+        let postCount = {{ posts| length }};
+
+        function updateDistricts(stateSelect) {
+            const state = stateSelect.value;
+            const districtSelect = document.getElementById('district-select');
+            districtSelect.innerHTML = '<option hidden>Select District</option>';
+            if (state && indiaData[state]) {
+                indiaData[state].forEach(dist => {
+                    const opt = document.createElement('option');
+                    opt.value = dist;
+                    opt.textContent = dist;
+                    districtSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function addPostBox() {
+            postCount++;
+            const container = document.getElementById('posts-container');
+            const box = document.createElement('div');
+            box.className = 'post-detail-box';
+            box.id = `post-box-${postCount}`;
+            box.innerHTML = `
+                <div class="post-header">
+                    <div class="post-title">Post #${postCount}</div>
+                    <button type="button" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:12px;" onclick="removePostBox(${postCount})">Remove</button>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Post Category *</label>
+                        <select name="post_category[]" required>
+                            <option value="" hidden>Select Post</option>
+                            <option value="prt">PRT</option>
+                            <option value="tgt">TGT</option>
+                            <option value="pgt">PGT</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Subject *</label>
+                        <input type="text" name="post_subject[]" placeholder="Enter Subject" required>
+                    </div>
+                </div>
+                <div style="font-size:15px; font-weight:600; margin: 20px 0 15px 0;">Requirements & Compensation</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Professional Qualification</label>
+                        <textarea name="post_qualification[]" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Total Compensation Package</label>
+                        <textarea name="post_compensation[]" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Eligibility Test</label>
+                        <textarea name="post_eligibility[]" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Age Limit</label>
+                        <textarea name="post_age_limit[]" rows="3"></textarea>
+                    </div>
+                </div>
+            `;
+            container.appendChild(box);
+        }
+
+        function removePostBox(id) {
+            const box = document.getElementById(`post-box-${id}`);
+            if (box) box.remove();
+        }
+    </script>
+</body>
+
+</html>

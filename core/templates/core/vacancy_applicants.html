@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applicants - TapTeacher Admin</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #fcfcfc;
+            color: #333;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .post-title {
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .applicant-row {
+            padding: 12px;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .applicant-row:last-child {
+            border-bottom: none;
+        }
+
+        .applicant-name {
+            font-weight: 600;
+            color: #111;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .applicant-name:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            background: #e3f2fd;
+            color: #1565c0;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .empty-msg {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{% url 'admin_dashboard' %}" class="back-btn">← Back to Admin</a>
+            <h1>Applicants</h1>
+        </div>
+
+        {% if not applicants_data %}
+        <div class="card">
+            <h3>No applicants found for this vacancy.</h3>
+        </div>
+        {% endif %}
+
+        {% for item in applicants_data %}
+        <div class="card">
+            <div class="post-title">
+                Applicants for {{ vacancy.institute.name }} - {{ item.post.subject }} ({{ item.post.category|upper }})
+                <span style="font-weight: 400; color: #666; font-size: 14px; margin-left: 10px;">Found {{
+                    item.applications.count }} applicant(s).</span>
+            </div>
+
+            {% for app in item.applications %}
+            <div class="applicant-row">
+                <div>
+                    <!-- Link to User Dashboard View as Admin -->
+                    <a href="{% url 'user_dashboard_admin' app.user.id %}" class="applicant-name">
+                        {{ app.user.verification.full_name|default:app.user.username }}
+                    </a>
+                    <div style="font-size: 12px; color: #666;">{{ app.user.email }}</div>
+                </div>
+                <div>
+                    <span class="status-badge">Applied: {{ app.applied_at|date:"d M Y" }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+
+</html>

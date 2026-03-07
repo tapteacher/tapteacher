@@ -1,0 +1,63 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="page-title-section">
+    <h1>Teaching jobs in India</h1>
+</div>
+
+<div class="content-wrapper">
+    <!-- Sidebar -->
+    {% include 'core/includes/sidebar.html' %}
+
+    <!-- Main Content Area -->
+    <div class="main-display">
+        <div class="main-display-header">
+            <!-- Left Side: Back Button & Title -->
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <a href="{% url 'state_view' state_name=state_name %}?category={{ current_category }}"
+                    class="btn-header hover-darken" style="display: flex; align-items: center; gap: 5px;">
+                    <span>&#8592;</span> Back to Districts
+                </a>
+                <h2 style="margin: 0; font-size: 20px;">{{ page_title }}</h2>
+            </div>
+
+            <!-- Right Side: Home Text Button -->
+            <a href="{% url 'home' %}" class="btn-home">
+                Home
+            </a>
+        </div>
+
+        <!-- Vacancy List or Empty State -->
+        <div class="vacancy-container" style="flex-grow: 1; overflow-y: auto;">
+            {% if vacancies %}
+            {% for vacancy in vacancies %}
+            <div class="vacancy-card blink-candidate {% if vacancy.is_blinking %}blink-red{% endif %}"
+                data-institute-id="{{ vacancy.id }}"
+                data-url="{% url 'institute_view' state_name=state_name district_name=district_name institute_name=vacancy.title %}?category={{ current_category }}"
+                onclick="handleCardClick(this)"
+                style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; cursor: pointer; transition: all 0.3s ease;"
+                onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.15)'; this.style.backgroundColor='#f9f9f9';"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'; this.style.backgroundColor='white';">
+                <div>
+                    <h3 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 700;">{{ vacancy.title }}</h3>
+                    <div style="font-size: 13px; color: #666;">Posted on: {{ vacancy.posted_date }}</div>
+                </div>
+
+                <div class="blink-control-wrapper"
+                    style="display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 500;"
+                    onclick="event.stopPropagation();">
+                    <input type="checkbox" class="blink-toggle" id="blink-{{ vacancy.id }}" data-id="{{ vacancy.id }}"
+                        {% if not vacancy.is_blinking %}checked{% endif %}>
+                    <label for="blink-{{ vacancy.id }}" style="cursor: pointer;">Mark as Read</label>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="padding: 20px 0; color: #000; font-size: 15px;">
+                No institutes with vacancies found for this selection.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

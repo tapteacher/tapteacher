@@ -1,0 +1,31 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="page-title-section">
+    <h1>Teaching jobs in India</h1>
+</div>
+
+<div class="content-wrapper">
+    <!-- Sidebar -->
+    {% include 'core/includes/sidebar.html' %}
+
+    <!-- Main Content Area -->
+    <div class="main-display">
+        <div class="main-display-header">
+            <h2>Select Location for {{ current_title }}</h2>
+            <a href="#" class="btn-home">
+                <span class="icon-home">🏠</span> Home
+            </a>
+        </div>
+
+        <div class="location-grid">
+            {% for state in states %}
+            <a href="{% url 'state_view' state_name=state %}?category={{ current_category }}"
+                class="location-card {% if state in blinking_states %}blink-red{% endif %}" style="display: block;">
+                {{ state }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends 'core/base.html' %}
+
+{% block title %}User Details - Admin{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 30px auto 50px auto; padding: 0 20px;">
+
+    <!-- Header -->
+    <div style="margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between;">
+        <h1 style="margin: 0; font-family: 'Times New Roman', serif; font-size: 32px; font-weight: 700; color: #333;">
+            User Details
+        </h1>
+        <a href="{% url 'admin_dashboard' %}"
+            style="padding: 10px 20px; background: white; border: 1px solid #ddd; color: #333; text-decoration: none; border-radius: 6px; font-weight: 500; transition: all 0.2s ease;">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+    <!-- User Details Section -->
+    <div
+        style="background: white; border: 1px solid #eee; border-radius: 12px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+
+        <div style="margin-bottom: 25px;">
+            <h2 style="margin: 0 0 10px 0; font-family: 'Times New Roman', serif; font-size: 24px;">
+                User Details ({{ user_list|length }})
+            </h2>
+            <p style="color: #666; margin: 0; font-size: 14px;">Search for users by email or unique number.</p>
+        </div>
+
+        <!-- Search Bar -->
+        <form method="GET" action="" style="margin-bottom: 30px;" id="search-form">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search by email or unique number..."
+                autocomplete="off" oninput="this.form.submit()"
+                style="width: 100%; padding: 15px; border: 1px solid #eee; border-radius: 8px; background: #f9f9f9; font-size: 16px; outline: none;">
+            <!-- Note: oninput=submit causes rapid reloads. Better to use JS debounce or manual enter. -->
+        </form>
+        <script>
+            // Simple debounce for search
+            const searchInput = document.querySelector('input[name="q"]');
+            if (searchInput) {
+                searchInput.removeAttribute('oninput'); // Remove inline to add properly
+                let timeout = null;
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        this.form.submit();
+                    }, 500); // Wait 500ms after last keystroke
+                });
+                // Focus styling
+                searchInput.addEventListener('focus', function () {
+                    this.style.background = 'white';
+                    this.style.borderColor = '#ddd';
+                    this.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.05)';
+                });
+                searchInput.addEventListener('blur', function () {
+                    this.style.background = '#f9f9f9';
+                    this.style.borderColor = '#eee';
+                    this.style.boxShadow = 'none';
+                });
+
+                // Keep focus after reload
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('q')) {
+                    searchInput.focus();
+                    // Move cursor to end
+                    const val = searchInput.value;
+                    searchInput.value = '';
+                    searchInput.value = val;
+                }
+            }
+        </script>
+
+        <!-- Users List -->
+        <div
+            style="display: flex; flex-direction: column; gap: 15px; max-height: 350px; overflow-y: auto; padding-right: 10px; padding-bottom: 10px; border: 1px solid #f0f0f0; border-radius: 8px; padding: 10px;">
+            {% for item in user_list %}
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border: 1px solid #eee; border-radius: 8px; background: white; transition: all 0.2s ease;">
+                <div>
+                    {% if item.profile.full_name %}
+                    <h3 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 700; color: #333;">
+                        {{ item.profile.full_name }}
+                    </h3>
+                    <div style="font-size: 14px; color: #555;">
+                        {{ item.user.email }}
+                        {% if item.profile.unique_number %}
+                        <span style="color: #666; font-weight: 500;">(ID: {{ item.profile.unique_number }})</span>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <h3 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 700; color: #333;">
+                        {{ item.user.email }}
+                    </h3>
+                    {% if item.profile.unique_number %}
+                    <div style="font-size: 14px; color: #666;">
+                        ID: {{ item.profile.unique_number }}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+                <a href="{% url 'user_dashboard_admin' item.user.id %}"
+                    style="padding: 10px 20px; background: #f9f9f9; border: 1px solid #ddd; color: #333; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500; transition: all 0.2s;">
+                    View Details
+                </a>
+            </div>
+            {% empty %}
+            <div
+                style="text-align: center; padding: 60px 20px; color: #999; background: white; border: 1px dashed #ddd; border-radius: 8px;">
+                <p style="margin: 0; font-size: 16px;">
+                    {% if search_query %}
+                    No users found matching "<strong>{{ search_query }}</strong>"
+                    {% else %}
+                    No users found registered on the platform.
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+<style>
+    /* Hover effects */
+    /* Add this if you want hover effect on cards */
+    /* div:hover { box-shadow: ... } logic inside loop is tricky with inline styles, but pure CSS works */
+</style>
+{% endblock %}

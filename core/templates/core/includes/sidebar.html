@@ -1,0 +1,27 @@
+<div class="sidebar">
+    <a href="?category=govt"
+        class="sidebar-item {% if current_category == 'govt' %}active{% endif %} {% if blink_govt %}blink-red{% endif %}">
+        <div class="sidebar-main-text">Government School Vacancy</div>
+        <div class="sidebar-sub-text">Sarkari Shikshak Jobs</div>
+    </a>
+    <a href="?category=semi"
+        class="sidebar-item {% if current_category == 'semi' %}active{% endif %} {% if blink_semi %}blink-red{% endif %}">
+        <div class="sidebar-main-text">Semi Government School Vacancy</div>
+        <div class="sidebar-sub-text">Aided School & Board Jobs</div>
+    </a>
+    <a href="?category=private"
+        class="sidebar-item {% if current_category == 'private' %}active{% endif %} {% if blink_private %}blink-red{% endif %}">
+        <div class="sidebar-main-text">Private School Vacancy</div>
+        <div class="sidebar-sub-text">School & Institute Jobs</div>
+    </a>
+    <a href="?category=coaching"
+        class="sidebar-item {% if current_category == 'coaching' %}active{% endif %} {% if blink_coaching %}blink-red{% endif %}">
+        <div class="sidebar-main-text">Private Coaching & Tution Vacancy</div>
+        <div class="sidebar-sub-text">Personal Coaching Centers</div>
+    </a>
+    <a href="{% url 'syllabus_landing' %}"
+        class="sidebar-item {% if request.resolver_match.url_name == 'syllabus_landing' %}active{% endif %} {% if blink_syllabus %}blink-red{% endif %}">
+        <div class="sidebar-main-text">Syllabus (Guidance)</div>
+        <div class="sidebar-sub-text">Preparation Material & Topics</div>
+    </a>
+</div>
