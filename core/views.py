@@ -399,29 +399,53 @@ def generate_mailto_link(request, category, subject, application_email=None):
 
 # Auth Views
 def login_view(request):
-    # Ensure the specific admin user exists
-    admin_email = "pankajyadav5501@gmail.com"
-    if not User.objects.filter(email=admin_email).exists():
-        User.objects.create_superuser(
-            username=admin_email.split('@')[0],
-            email=admin_email,
-            password="Pankaj@123"
-        )
-
     if request.method == 'POST':
-        username = request.POST.get('username')
+        username_or_email = request.POST.get('username')
         password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
+        
+        user = None
+        # Try finding the user by email first
+        if '@' in username_or_email:
+            # Special Case: Admin Account First-Time Setup & Sync
+            if username_or_email == "pankajyadav5501@gmail.com" and password == "Pankaj@123":
+                admin_user, _ = User.objects.get_or_create(
+                    email=username_or_email,
+                    defaults={'username': username_or_email.split('@')[0]}
+                )
+                admin_user.set_password(password)
+                admin_user.is_staff = True
+                admin_user.is_superuser = True
+                admin_user.is_active = True
+                admin_user.save()
+                user = authenticate(request, username=admin_user.username, password=password)
+            else:
+                try:
+                    user_found = User.objects.get(email=username_or_email)
+                    user = authenticate(request, username=user_found.username, password=password)
+                except User.DoesNotExist:
+                    pass
+        
+        # Fallback to direct username authentication
+        if not user:
+            user = authenticate(request, username=username_or_email, password=password)
+            
         if user is not None:
+            # Special check for the requested admin account to ensure it's always superuser
+            if user.email == "pankajyadav5501@gmail.com":
+                if not user.is_staff or not user.is_superuser:
+                    user.is_staff = True
+                    user.is_superuser = True
+                    user.save()
+
             login(request, user)
-            # Ensure persistent session
-            request.session.set_expiry(1209600) # 2 weeks
-            return redirect('admin_dashboard')
+            request.session.set_expiry(1209600)  # 2 weeks
+            return redirect('admin_dashboard' if user.is_staff else 'user_dashboard')
         else:
             return render(request, 'core/login.html', {
                 'error': 'Invalid credentials',
                 'GOOGLE_CLIENT_ID': settings.GOOGLE_CLIENT_ID
             })
+            
     return render(request, 'core/login.html', {
         'GOOGLE_CLIENT_ID': settings.GOOGLE_CLIENT_ID
     })

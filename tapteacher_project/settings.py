@@ -36,7 +36,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 SECURE_REFERRER_POLICY = 'no-referrer-when-downgrade'
 
 # Google Login settings
-GOOGLE_CLIENT_ID = '336770782932-aham1v08cius4htietk01cevrirtbut6.apps.googleusercontent.com'
+GOOGLE_CLIENT_ID = '388147092323-1f6gb8dp3m3qrgvi77odv8ptpu86i1v5.apps.googleusercontent.com'
 
 # Session settings for persistent login
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
