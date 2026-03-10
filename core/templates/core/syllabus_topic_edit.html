@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit: {{ topic.title }} - TapTeacher</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: #fcfcfc;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #111;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .back-btn {
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 4px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .topic-content {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            padding: 30px;
+        }
+
+        .edit-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 22px;
+            font-weight: 700;
+            font-family: inherit;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            color: #111;
+        }
+
+        .edit-textarea {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            font-family: inherit;
+            min-height: 400px;
+            margin-bottom: 30px;
+            box-sizing: border-box;
+            resize: vertical;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .btn-edit {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-save {
+            background: #111;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .attachments {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+            opacity: 0.6;
+        }
+
+        .attachment-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            background: #f9f9f9;
+            cursor: not-allowed;
+        }
+
+        .topic-image {
+            margin-top: 20px;
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <form action="{% url 'edit_topic_inline' topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+            method="POST">
+            {% csrf_token %}
+            <div class="header">
+                <div>
+                    <div style="font-size: 14px; color: #666; margin-bottom: 5px;">{{ subject.name }}</div>
+                    <h1 style="color: #666; font-size: 20px;">Editing Mode</h1>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="submit" class="btn-save">Save Changes</button>
+                    <a href="{% url 'syllabus_topic_detail' category.slug subject.id topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                        class="btn-edit">Cancel</a>
+                </div>
+            </div>
+
+            <div class="topic-content">
+                <input type="text" name="topic_title" value="{{ topic.title }}" class="edit-input" required
+                    placeholder="Topic Title">
+                <textarea name="topic_description" class="edit-textarea"
+                    placeholder="Topic Description...">{{ topic.description }}</textarea>
+
+                <div style="font-size: 12px; color: #888; margin-bottom: 15px; font-weight: 500;">
+                    ATTACHMENTS PREVIEW (Read-only on this page. Edit attachments in Admin dashboard)
+                </div>
+
+                <div class="attachments">
+                    {% if topic.ppt_file %}
+                    <span class="attachment-link">📄 Download PPT (Original)</span>
+                    {% endif %}
+                    {% if topic.pdf_file %}
+                    <span class="attachment-link">📑 Download PDF (Original)</span>
+                    {% endif %}
+                    {% for file in topic.files.all %}
+                    {% if file.file_type != 'image' %}
+                    <span class="attachment-link">
+                        {% if file.file_type == 'ppt' %}
+                        PPT
+                        {% elif file.file_type == 'pdf' %}
+                        PDF
+                        {% else %}
+                        File
+                        {% endif %}
+                    </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="topic-images" style="margin-top: 20px;">
+                    {% if topic.image %}
+                    <img src="{{ topic.image.url }}" alt="Topic Image" class="topic-image">
+                    {% endif %}
+                    {% for file in topic.files.all %}
+                    {% if file.file_type == 'image' %}
+                    <img src="{{ file.file.url }}" alt="Attachment Image" class="topic-image">
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div
+                    style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <a href="{% url 'syllabus_topic_detail' category.slug subject.id topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                        class="btn-edit">Cancel</a>
+                    <button type="submit" class="btn-save">Save Changes</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</body>
+
+</html>

@@ -1461,6 +1461,58 @@ def get_user_read_ids(user):
     """Helper to get list of vacancy IDs a user has marked as read."""
     return list(UserReadVacancy.objects.filter(user=user).values_list('vacancy_id', flat=True))
 
+@login_required(login_url='login_view')
+def syllabus_topic_edit_view(request, category_slug, subject_id, topic_id):
+    if not request.user.is_superuser:
+        return redirect('home')
+        
+    from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic
+    from django.shortcuts import get_object_or_404
+    
+    category = get_object_or_404(GuidanceCategory, slug=category_slug)
+    subject = get_object_or_404(GuidanceSubject, id=subject_id, category=category)
+    topic = get_object_or_404(GuidanceTopic, id=topic_id, subject=subject)
+    
+    return render(request, 'core/syllabus_topic_edit.html', {
+        'category': category,
+        'subject': subject,
+        'topic': topic,
+        'view_as_user': request.GET.get('view_as') if request.user.is_superuser else None
+    })
+
+
+@login_required(login_url='login_view')
+def edit_topic_inline(request, topic_id):
+    if not request.user.is_superuser:
+        return redirect('home')
+        
+    from .models import GuidanceTopic
+    from django.contrib import messages
+    
+    topic = get_object_or_404(GuidanceTopic, id=topic_id)
+    subject_id = topic.subject.id
+    category_slug = topic.subject.category.slug
+    
+    if request.method == 'POST':
+        new_title = request.POST.get('topic_title', '').strip()
+        new_description = request.POST.get('topic_description', '').strip()
+        
+        if new_title:
+            topic.title = new_title
+            topic.description = new_description
+            topic.save()
+            messages.success(request, 'Topic updated successfully.')
+        else:
+            messages.error(request, 'Topic title cannot be empty.')
+            
+    from django.urls import reverse
+    url = reverse('syllabus_topic_detail', kwargs={'category_slug': category_slug, 'subject_id': subject_id, 'topic_id': topic.id})
+    view_as = request.GET.get('view_as')
+    if view_as:
+        url += f'?view_as={view_as}'
+        
+    return redirect(url)
+
 @csrf_exempt
 def toggle_vacancy_read(request, vacancy_id):
     """

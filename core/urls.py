@@ -25,6 +25,11 @@ urlpatterns = [
     path('guidance/<slug:category_slug>/', views.syllabus_category_view, name='syllabus_category'),
     path('guidance/<slug:category_slug>/subject/<int:subject_id>/', views.syllabus_subject_view, name='syllabus_subject'),
     path('guidance/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/', views.syllabus_topic_detail_view, name='syllabus_topic_detail'),
+    path('edit_topic_inline/<int:topic_id>/', views.edit_topic_inline, name='edit_topic_inline'),
+    
+    # New Edit Page Routes
+    path('syllabus/category/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/edit/', 
+         views.syllabus_topic_edit_view, name='syllabus_topic_edit'),
     path('delete_topic/<int:topic_id>/', views.delete_topic, name='delete_topic'),
     path('api/toggle-read/<int:vacancy_id>/', views.toggle_vacancy_read, name='toggle_vacancy_read'),
     

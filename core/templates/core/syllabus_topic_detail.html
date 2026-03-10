@@ -143,6 +143,59 @@
                 transform: rotate(360deg);
             }
         }
+
+        .edit-mode-only,
+        .edit-active {
+            display: none !important;
+        }
+
+        .edit-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 22px;
+            font-weight: 700;
+            font-family: inherit;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .edit-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            font-family: inherit;
+            min-height: 150px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        .btn-edit {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .btn-save {
+            background: #111;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
     </style>
 </head>
 
@@ -155,9 +208,11 @@
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
                 {% if request.user.is_superuser %}
+                <a href="{% url 'syllabus_topic_edit' category.slug subject.id topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                    class="btn-edit view-mode-only">Edit Topic</a>
                 <form
                     action="{% url 'delete_topic' topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                    method="POST"
+                    method="POST" class="view-mode-only"
                     onsubmit="return confirm('Are you sure you want to permanently delete this topic? This action cannot be undone.');">
                     {% csrf_token %}
                     <button type="submit"
@@ -166,19 +221,23 @@
                 </form>
                 {% endif %}
                 <a href="{% url 'syllabus_subject' category_slug=category.slug subject_id=subject.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                    class="back-btn">←
+                    class="back-btn view-mode-only">←
                     Back to Topics</a>
             </div>
         </div>
 
-        <div class="topic-content">
-            <h2 class="topic-header-title">{{ topic.title }}</h2>
+        <div class="topic-content" id="topic-content-container">
+            <h2 class="topic-header-title view-mode-only">{{ topic.title }}</h2>
 
             {% if topic.description %}
-            <div class="topic-desc">{{ topic.description|linebreaks }}</div>
+            <div class="topic-desc view-mode-only">{{ topic.description|linebreaks }}</div>
             {% endif %}
 
-            <div class="attachments">
+            {% if request.user.is_superuser %}
+            <!-- Editing moved to a separate page -->
+            {% endif %}
+
+            <div class="attachments view-mode-only">
                 {% if topic.ppt_file %}
                 <a href="{{ topic.ppt_file.url }}" class="attachment-link" target="_blank">
                     📄 Download PPT (Original)
@@ -192,21 +251,25 @@
                 {% endif %}
 
                 {% for file in topic.files.all %}
+                {% if file.file_type != 'image' %}
                 <a href="{{ file.file.url }}" class="attachment-link" target="_blank">
-                    {% if file.file_type == 'ppt' %}PPT{% elif file.file_type == 'pdf' %}PDF{% else %}IMG{% endif %}
+                    {% if file.file_type == 'ppt' %}PPT{% elif file.file_type == 'pdf' %}PDF{% else %}File{% endif %}
                 </a>
+                {% endif %}
                 {% endfor %}
             </div>
 
-            {% if topic.image %}
-            <img src="{{ topic.image.url }}" alt="Topic Image" class="topic-image">
-            {% endif %}
+            <div class="topic-images view-mode-only" style="margin-top: 20px;">
+                {% if topic.image %}
+                <img src="{{ topic.image.url }}" alt="Topic Image" class="topic-image">
+                {% endif %}
 
-            {% for file in topic.files.all %}
-            {% if file.file_type == 'image' %}
-            <img src="{{ file.file.url }}" alt="Attachment Image" class="topic-image">
-            {% endif %}
-            {% endfor %}
+                {% for file in topic.files.all %}
+                {% if file.file_type == 'image' %}
+                <img src="{{ file.file.url }}" alt="Attachment Image" class="topic-image">
+                {% endif %}
+                {% endfor %}
+            </div>
         </div>
 
         <div id="download-loader">
@@ -218,6 +281,11 @@
     </div>
 
     <script>
+        // Edit mode has been moved to a separate page.
+        function toggleEditMode() {
+            window.location.href = "{% url 'syllabus_topic_edit' category.slug subject.id topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}";
+        }
+
         document.querySelectorAll('.attachment-link').forEach(link => {
             link.addEventListener('click', function () {
                 const loader = document.getElementById('download-loader');
