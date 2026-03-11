@@ -147,7 +147,7 @@
 <body>
     <div class="container">
         <form action="{% url 'edit_topic_inline' topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-            method="POST">
+            method="POST" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="header">
                 <div>
@@ -168,7 +168,7 @@
                     placeholder="Topic Description...">{{ topic.description }}</textarea>
 
                 <div style="font-size: 12px; color: #888; margin-bottom: 15px; font-weight: 500;">
-                    ATTACHMENTS PREVIEW (Read-only on this page. Edit attachments in Admin dashboard)
+                    ATTACHMENTS PREVIEW
                 </div>
 
                 <div class="attachments">
@@ -193,15 +193,55 @@
                     {% endfor %}
                 </div>
 
-                <div class="topic-images" style="margin-top: 20px;">
+                <!-- Image Management Section -->
+                <div
+                    style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; border: 1px solid #eee;">
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #333;">📷 Images</div>
+
+                    <!-- Existing Images -->
                     {% if topic.image %}
-                    <img src="{{ topic.image.url }}" alt="Topic Image" class="topic-image">
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Main Image</div>
+                        <div style="position: relative; display: inline-block;">
+                            <img src="{{ topic.image.url }}" alt="Topic Image"
+                                style="max-width: 200px; border-radius: 6px; border: 1px solid #ddd; display: block;"
+                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div
+                                style="display:none; width:200px; height:80px; background:#f0f0f0; border:1px dashed #ccc; border-radius:6px; align-items:center; justify-content:center; font-size:12px; color:#999;">
+                                ⚠️ Image broken</div>
+                        </div>
+                    </div>
                     {% endif %}
+
                     {% for file in topic.files.all %}
                     {% if file.file_type == 'image' %}
-                    <img src="{{ file.file.url }}" alt="Attachment Image" class="topic-image">
+                    <div
+                        style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; padding: 10px; background: #fff; border-radius: 6px; border: 1px solid #eee;">
+                        <div style="flex: 1;">
+                            <img src="{{ file.file.url }}" alt="Attachment Image"
+                                style="max-width: 180px; max-height: 120px; object-fit: contain; border-radius: 4px; border: 1px solid #ddd; display: block;"
+                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div
+                                style="display:none; width:180px; height:60px; background:#fff3e0; border:1px dashed #ffcc80; border-radius:4px; align-items:center; justify-content:center; font-size:12px; color:#e65100;">
+                                ⚠️ Broken image (re-upload below)</div>
+                        </div>
+                        <div>
+                            <button type="button" onclick="deleteImageFile({{ file.id }})"
+                                style="background: #ff4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑
+                                Delete</button>
+                        </div>
+                    </div>
                     {% endif %}
                     {% endfor %}
+
+                    <!-- Upload New Images -->
+                    <div style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px;">
+                        <label style="font-size: 13px; font-weight: 500; display: block; margin-bottom: 6px;">Upload New
+                            Images</label>
+                        <input type="file" name="new_images" accept="image/*" multiple style="font-size: 13px;">
+                        <div style="font-size: 11px; color: #999; margin-top: 4px;">Select one or more images. Existing
+                            images are kept unless deleted.</div>
+                    </div>
                 </div>
 
                 <div
@@ -213,6 +253,35 @@
             </div>
         </form>
     </div>
+
+    <script>
+        function deleteImageFile(fileId) {
+            if (!confirm('Delete this image? This cannot be undone.')) return;
+
+            fetch(`/delete-topic-file/${fileId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ file_id: fileId })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the image container from DOM
+                        const btn = document.querySelector(`button[onclick="deleteImageFile(${fileId})"]`);
+                        if (btn) {
+                            const row = btn.closest('div[style*="display: flex"]');
+                            if (row) row.remove();
+                        }
+                    } else {
+                        alert('Failed to delete image: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(() => alert('Network error. Please try again.'));
+        }
+    </script>
 </body>
 
 </html>

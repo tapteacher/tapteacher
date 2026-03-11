@@ -31,6 +31,7 @@ urlpatterns = [
     path('syllabus/category/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/edit/', 
          views.syllabus_topic_edit_view, name='syllabus_topic_edit'),
     path('delete_topic/<int:topic_id>/', views.delete_topic, name='delete_topic'),
+    path('delete-topic-file/<int:file_id>/', views.delete_topic_file, name='delete_topic_file'),
     path('api/toggle-read/<int:vacancy_id>/', views.toggle_vacancy_read, name='toggle_vacancy_read'),
     
     # Admin User Management

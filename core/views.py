@@ -1502,6 +1502,12 @@ def edit_topic_inline(request, topic_id):
             topic.description = new_description
             topic.save()
             messages.success(request, 'Topic updated successfully.')
+
+            # Handle new image uploads
+            from .models import GuidanceTopicFile
+            new_images = request.FILES.getlist('new_images')
+            for img in new_images:
+                GuidanceTopicFile.objects.create(topic=topic, file=img, file_type='image')
         else:
             messages.error(request, 'Topic title cannot be empty.')
             
@@ -1512,6 +1518,32 @@ def edit_topic_inline(request, topic_id):
         url += f'?view_as={view_as}'
         
     return redirect(url)
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def delete_topic_file(request, file_id):
+    """API to delete a GuidanceTopicFile record (used for broken image cleanup)."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
+    from .models import GuidanceTopicFile
+    import json
+    
+    if request.method == 'POST':
+        try:
+            file_obj = GuidanceTopicFile.objects.get(id=file_id)
+            # Try to delete the actual file too (may fail on Cloudinary, that's ok)
+            try:
+                file_obj.file.delete(save=False)
+            except Exception:
+                pass
+            file_obj.delete()
+            return JsonResponse({'success': True})
+        except GuidanceTopicFile.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'File not found'}, status=404)
+    
+    return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
 
 @csrf_exempt
 def toggle_vacancy_read(request, vacancy_id):

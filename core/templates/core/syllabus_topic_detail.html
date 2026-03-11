@@ -261,12 +261,24 @@
 
             <div class="topic-images view-mode-only" style="margin-top: 20px;">
                 {% if topic.image %}
-                <img src="{{ topic.image.url }}" alt="Topic Image" class="topic-image">
+                <div style="position:relative; display:inline-block; margin-bottom:12px;">
+                    <img src="{{ topic.image.url }}" alt="Topic Image" class="topic-image"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div
+                        style="display:none; width:100%; min-height:80px; background:#f9f9f9; border:1px dashed #ddd; border-radius:8px; align-items:center; justify-content:center; font-size:13px; color:#999; padding:20px;">
+                        ⚠️ Image could not be loaded</div>
+                </div>
                 {% endif %}
 
                 {% for file in topic.files.all %}
                 {% if file.file_type == 'image' %}
-                <img src="{{ file.file.url }}" alt="Attachment Image" class="topic-image">
+                <div style="position:relative; display:inline-block; margin-bottom:12px;">
+                    <img src="{{ file.file.url }}" alt="Attachment Image" class="topic-image"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div
+                        style="display:none; width:100%; min-height:80px; background:#f9f9f9; border:1px dashed #ddd; border-radius:8px; align-items:center; justify-content:center; font-size:13px; color:#999; padding:20px;">
+                        ⚠️ Image could not be loaded. Please contact the admin to re-upload this image.</div>
+                </div>
                 {% endif %}
                 {% endfor %}
             </div>
