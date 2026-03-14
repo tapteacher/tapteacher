@@ -645,6 +645,7 @@ def admin_dashboard(request):
                         topic.save()
 
                         import re
+                        import os
 
                         def sanitize_filename(filename):
                             # Replace spaces and special characters with underscores
