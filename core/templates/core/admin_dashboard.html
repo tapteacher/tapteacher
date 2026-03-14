@@ -1179,7 +1179,16 @@
                             // Success - Redirect
                             window.location.reload();
                         } else {
-                            alert('Upload failed. Please try again.');
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                if (response.traceback) {
+                                    alert('Upload failed due to Server Error:\n\n' + response.error + '\n\n' + response.traceback.substring(0, 500) + '...');
+                                } else {
+                                    alert('Upload failed: ' + (response.error || 'Please try again.'));
+                                }
+                            } catch(e) {
+                                alert('Upload failed. Server returned status: ' + xhr.status);
+                            }
                             overlay.style.display = 'none';
                         }
                     }

@@ -587,85 +587,89 @@ def admin_dashboard(request):
 
         # Handle "Upload Syllabus" submission
         elif 'upload_syllabus' in request.POST:
-            from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, GuidanceTopicFile, User
-            
-            target_audience = request.POST.get('target_audience')
-            category_slug = request.POST.get('guidance_category')
-            subject_name = request.POST.get('subject_name')
-            
-            # Find or Create Category
-            if category_slug:
-                category, _ = GuidanceCategory.objects.get_or_create(slug=category_slug, defaults={'name': category_slug.upper()})
+            try:
+                from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, GuidanceTopicFile, User
                 
-                # Find or Create Subject
-                subject, _ = GuidanceSubject.objects.get_or_create(
-                    category=category, 
-                    name=subject_name
-                )
+                target_audience = request.POST.get('target_audience')
+                category_slug = request.POST.get('guidance_category')
+                subject_name = request.POST.get('subject_name')
                 
-                # Handle Topics
-                topic_limit = int(request.POST.get('topic_count', 0))
-                
-                assigned_user = None
-                assigned_user = None
-                if target_audience == 'individual':
-                    user_id = request.POST.get('selected_user_id')
-                    try:
-                        if user_id:
-                            assigned_user = User.objects.get(id=user_id)
-                        else:
-                             # Fallback or Error
-                             from django.contrib import messages
-                             messages.error(request, "Please select a user for Individual Syllabus.")
-                             return redirect('admin_dashboard')
-                    except User.DoesNotExist:
-                        from django.contrib import messages
-                        messages.error(request, "Selected user does not exist.")
-                        return redirect('admin_dashboard')
-                
-                # Loop through potential topics
-                # Note: topicCounter in JS increments, so we iterate up to the limit
-                # But since we might have deleted some? 
-                # Actually my JS implementation doesn't support deleting topics yet for simplicitly, 
-                # but valid indices are 0 to topic_limit-1.
-                
-                for i in range(topic_limit):
-                    title = request.POST.get(f'topic_title_{i}')
-                    if not title: 
-                        continue # Skip empty or missing
+                # Find or Create Category
+                if category_slug:
+                    category, _ = GuidanceCategory.objects.get_or_create(slug=category_slug, defaults={'name': category_slug.upper()})
                     
-                    desc = request.POST.get(f'topic_desc_{i}', '')
-                    
-                    # Create Topic
-                    topic = GuidanceTopic.objects.create(
-                        subject=subject,
-                        title=title,
-                        description=desc,
-                        is_for_everyone=(target_audience == 'everyone')
+                    # Find or Create Subject
+                    subject, _ = GuidanceSubject.objects.get_or_create(
+                        category=category, 
+                        name=subject_name
                     )
                     
-                    if assigned_user:
-                        topic.assigned_users.add(assigned_user)
+                    # Handle Topics
+                    topic_limit = int(request.POST.get('topic_count', 0))
                     
-                    topic.save()
-
-                    # Handle Multiple Files
-                    # PPTs
-                    if request.FILES.getlist(f'topic_ppt_{i}[]'):
-                        for f in request.FILES.getlist(f'topic_ppt_{i}[]'):
-                            GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='ppt')
+                    assigned_user = None
+                    if target_audience == 'individual':
+                        user_id = request.POST.get('selected_user_id')
+                        try:
+                            if user_id:
+                                assigned_user = User.objects.get(id=user_id)
+                            else:
+                                 # Fallback or Error
+                                 from django.contrib import messages
+                                 messages.error(request, "Please select a user for Individual Syllabus.")
+                                 return redirect('admin_dashboard')
+                        except User.DoesNotExist:
+                            from django.contrib import messages
+                            messages.error(request, "Selected user does not exist.")
+                            return redirect('admin_dashboard')
                     
-                    # PDFs
-                    if request.FILES.getlist(f'topic_pdf_{i}[]'):
-                        for f in request.FILES.getlist(f'topic_pdf_{i}[]'):
-                            GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='pdf')
+                    # Loop through potential topics
+                    for i in range(topic_limit):
+                        title = request.POST.get(f'topic_title_{i}')
+                        if not title: 
+                            continue # Skip empty or missing
+                        
+                        desc = request.POST.get(f'topic_desc_{i}', '')
+                        
+                        # Create Topic
+                        topic = GuidanceTopic.objects.create(
+                            subject=subject,
+                            title=title,
+                            description=desc,
+                            is_for_everyone=(target_audience == 'everyone')
+                        )
+                        
+                        if assigned_user:
+                            topic.assigned_users.add(assigned_user)
+                        
+                        topic.save()
 
-                    # Images
-                    if request.FILES.getlist(f'topic_image_{i}[]'):
-                        for f in request.FILES.getlist(f'topic_image_{i}[]'):
-                            GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='image')
-            
-            return redirect('admin_dashboard')
+                        # Handle Multiple Files
+                        # PPTs
+                        if request.FILES.getlist(f'topic_ppt_{i}[]'):
+                            for f in request.FILES.getlist(f'topic_ppt_{i}[]'):
+                                GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='ppt')
+                        
+                        # PDFs
+                        if request.FILES.getlist(f'topic_pdf_{i}[]'):
+                            for f in request.FILES.getlist(f'topic_pdf_{i}[]'):
+                                GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='pdf')
+
+                        # Images
+                        if request.FILES.getlist(f'topic_image_{i}[]'):
+                            for f in request.FILES.getlist(f'topic_image_{i}[]'):
+                                GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='image')
+                
+                return redirect('admin_dashboard')
+            except Exception as e:
+                import traceback
+                error_trace = traceback.format_exc()
+                print("Syllabus Upload Error:", error_trace)
+                return JsonResponse({
+                    'success': False, 
+                    'error': str(e),
+                    'traceback': error_trace
+                }, status=500)
             
         # Handle "Add/Edit Email Template"
         elif 'save_email_template' in request.POST:
