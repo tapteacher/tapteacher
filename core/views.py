@@ -644,20 +644,31 @@ def admin_dashboard(request):
                         
                         topic.save()
 
+                        import re
+
+                        def sanitize_filename(filename):
+                            # Replace spaces and special characters with underscores
+                            name, ext = os.path.splitext(filename)
+                            name = re.sub(r'[^a-zA-Z0-9_.-]', '_', name)
+                            return name + ext
+
                         # Handle Multiple Files
                         # PPTs
                         if request.FILES.getlist(f'topic_ppt_{i}[]'):
                             for f in request.FILES.getlist(f'topic_ppt_{i}[]'):
+                                f.name = sanitize_filename(f.name)
                                 GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='ppt')
                         
                         # PDFs
                         if request.FILES.getlist(f'topic_pdf_{i}[]'):
                             for f in request.FILES.getlist(f'topic_pdf_{i}[]'):
+                                f.name = sanitize_filename(f.name)
                                 GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='pdf')
 
                         # Images
                         if request.FILES.getlist(f'topic_image_{i}[]'):
                             for f in request.FILES.getlist(f'topic_image_{i}[]'):
+                                f.name = sanitize_filename(f.name)
                                 GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='image')
                 
                 return redirect('admin_dashboard')
