@@ -1,6 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+def get_raw_storage():
+    from django.conf import settings
+    if settings.USE_CLOUDINARY:
+        from cloudinary_storage.storage import RawMediaCloudinaryStorage
+        return RawMediaCloudinaryStorage()
+    from django.core.files.storage import FileSystemStorage
+    return FileSystemStorage()
+
 class SiteSettings(models.Model):
     youtube_link = models.CharField(max_length=255, default='@tapteacher', help_text="YouTube Link or Username")
     telegram_link = models.CharField(max_length=255, default='https://t.me/tapteacher', help_text="Telegram Link or Username")
@@ -150,8 +158,8 @@ class GuidanceTopic(models.Model):
     description = models.TextField(blank=True)
     
     # Uploads
-    ppt_file = models.FileField(upload_to='guidance/ppts/', blank=True, null=True)
-    pdf_file = models.FileField(upload_to='guidance/pdfs/', blank=True, null=True)
+    ppt_file = models.FileField(upload_to='guidance/ppts/', storage=get_raw_storage, blank=True, null=True)
+    pdf_file = models.FileField(upload_to='guidance/pdfs/', storage=get_raw_storage, blank=True, null=True)
     image = models.ImageField(upload_to='guidance/images/', blank=True, null=True)
     
     # Access Control
@@ -165,7 +173,7 @@ class GuidanceTopic(models.Model):
 
 class GuidanceTopicFile(models.Model):
     topic = models.ForeignKey(GuidanceTopic, on_delete=models.CASCADE, related_name='files')
-    file = models.FileField(upload_to='guidance/files/')
+    file = models.FileField(upload_to='guidance/files/', storage=get_raw_storage)
     file_type = models.CharField(max_length=20, choices=[('ppt', 'PPT'), ('pdf', 'PDF'), ('image', 'Image')], default='other')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -186,22 +194,22 @@ class UserVerification(models.Model):
     
     # Highest Qualification
     highest_qual_desc = models.TextField(blank=True)
-    highest_qual_file = models.FileField(upload_to='verification/qualifications/', blank=True, null=True)
+    highest_qual_file = models.FileField(upload_to='verification/qualifications/', storage=get_raw_storage, blank=True, null=True)
     
     # Certificate in Education
     edu_cert_desc = models.TextField(blank=True)
-    edu_cert_file = models.FileField(upload_to='verification/certificates/', blank=True, null=True)
+    edu_cert_file = models.FileField(upload_to='verification/certificates/', storage=get_raw_storage, blank=True, null=True)
     
     # Experience
     exp_desc = models.TextField(blank=True)
-    exp_file = models.FileField(upload_to='verification/experience/', blank=True, null=True)
+    exp_file = models.FileField(upload_to='verification/experience/', storage=get_raw_storage, blank=True, null=True)
     
     # Salary
     expected_salary = models.CharField(max_length=100, blank=True)
-    salary_statement_file = models.FileField(upload_to='verification/salary/', blank=True, null=True)
+    salary_statement_file = models.FileField(upload_to='verification/salary/', storage=get_raw_storage, blank=True, null=True)
     
     # Resume
-    resume = models.FileField(upload_to='verification/resumes/', blank=True, null=True)
+    resume = models.FileField(upload_to='verification/resumes/', storage=get_raw_storage, blank=True, null=True)
     
     # Track when user last visited syllabus for notification blinking
     last_syllabus_visit = models.DateTimeField(blank=True, null=True)
@@ -236,7 +244,7 @@ class ChatMessage(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_messages')
     sender_is_admin = models.BooleanField(default=False, help_text="True if admin sent this message")
     message_text = models.TextField(blank=True, null=True)
-    attachment = models.FileField(upload_to='chat_attachments/', blank=True, null=True)
+    attachment = models.FileField(upload_to='chat_attachments/', storage=get_raw_storage, blank=True, null=True)
     attachment_type = models.CharField(max_length=20, choices=ATTACHMENT_TYPE_CHOICES, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)

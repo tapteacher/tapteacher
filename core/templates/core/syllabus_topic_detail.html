@@ -293,6 +293,18 @@
     </div>
 
     <script>
+        // Fix broken Cloudinary PDF URLs (those uploaded as 'image' type without extension)
+        document.querySelectorAll('.attachment-link').forEach(link => {
+            const text = link.textContent.trim().toUpperCase();
+            if (text.includes('PDF')) {
+                let url = link.getAttribute('href');
+                // If it's a Cloudinary image upload URL for a PDF and missing the extension
+                if (url && url.includes('/image/upload/') && !url.toLowerCase().endsWith('.pdf')) {
+                    link.setAttribute('href', url + '.pdf');
+                }
+            }
+        });
+
         // Edit mode has been moved to a separate page.
         function toggleEditMode() {
             window.location.href = "{% url 'syllabus_topic_edit' category.slug subject.id topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}";
