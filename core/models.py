@@ -4,8 +4,8 @@ from django.contrib.auth.models import User
 def get_raw_storage():
     from django.conf import settings
     if settings.USE_CLOUDINARY:
-        from cloudinary_storage.storage import RawMediaCloudinaryStorage
-        return RawMediaCloudinaryStorage()
+        from cloudinary_storage.storage import MediaCloudinaryStorage
+        return MediaCloudinaryStorage()
     from django.core.files.storage import FileSystemStorage
     return FileSystemStorage()
 
