@@ -145,9 +145,6 @@
                                         <div id="category-list" style="display: none;"></div>
                                     </div>
                                 </div>
-                                <!-- Safe JSON data holders -->
-                                <script id="india-data-json" type="application/json">{{ india_data }}</script>
-                                <script id="prefs-data-json" type="application/json">{{ location_preferences }}</script>
                             </div>
 
                             <!-- Highest Qualification -->
@@ -1013,13 +1010,19 @@
                         switchTab(hash);
                     }
 
+                    // Load JSON data into variables (DOM is ready here)
+                    try {
+                        indiaData = JSON.parse(document.getElementById('india-data-json').textContent || '{}');
+                        locationPrefs = JSON.parse(document.getElementById('prefs-data-json').textContent || '[]');
+                    } catch(e) { console.error('Location data parse error:', e); }
+
                     // Initialize Location Preference
                     initLocationPreference();
                 });
 
                 // Location Preference Logic
-                const indiaData = JSON.parse(document.getElementById('india-data-json').textContent || '{}');
-                let locationPrefs = JSON.parse(document.getElementById('prefs-data-json').textContent || '[]');
+                var indiaData = {};
+                var locationPrefs = [];
 
                 function initLocationPreference() {
                     const stateList = document.getElementById('state-list');
