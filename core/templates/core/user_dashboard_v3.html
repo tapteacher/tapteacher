@@ -1010,19 +1010,13 @@
                         switchTab(hash);
                     }
 
-                    // Load JSON data into variables (DOM is ready here)
-                    try {
-                        indiaData = JSON.parse(document.getElementById('india-data-json').textContent || '{}');
-                        locationPrefs = JSON.parse(document.getElementById('prefs-data-json').textContent || '[]');
-                    } catch(e) { console.error('Location data parse error:', e); }
-
-                    // Initialize Location Preference
+                    // Initialize Location Preference (data already loaded via window globals)
                     initLocationPreference();
                 });
 
                 // Location Preference Logic
-                var indiaData = {};
-                var locationPrefs = [];
+                var indiaData = window._INDIA_DATA || {};
+                var locationPrefs = window._LOCATION_PREFS || [];
 
                 function initLocationPreference() {
                     const stateList = document.getElementById('state-list');
