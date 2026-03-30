@@ -957,8 +957,8 @@ def user_dashboard(request, user_id=None):
         'user_messages': user_messages,
         'unread_chat_count': unread_chat_count,
         'user_full_name': verification.full_name or target_user.email, # Override header name
-        'india_data': json.dumps(INDIA_DATA),
-        'location_preferences': json.dumps(verification.location_preferences or [])
+        'india_data': INDIA_DATA,
+        'location_preferences': verification.location_preferences or []
     })
 
 def apply_to_vacancy(request, post_id):

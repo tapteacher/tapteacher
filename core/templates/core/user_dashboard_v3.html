@@ -940,6 +940,10 @@
                 }
             </style>
 
+            <!-- Securely embed India data for JS - Official Django Method -->
+            {{ india_data|json_script:"india-data-json" }}
+            {{ location_preferences|json_script:"prefs-data-json" }}
+
             <script>
                 function switchTab(tabName, event) {
                     // Remove active class from all tabs and content
@@ -1010,13 +1014,19 @@
                         switchTab(hash);
                     }
 
-                    // Initialize Location Preference (data already loaded via window globals)
+                    // Load JSON data into variables (DOM is guaranteed ready here)
+                    try {
+                        indiaData = JSON.parse(document.getElementById('india-data-json').textContent);
+                        locationPrefs = JSON.parse(document.getElementById('prefs-data-json').textContent);
+                    } catch(e) { console.error('Location data parse error:', e); }
+
+                    // Initialize Location Preference
                     initLocationPreference();
                 });
 
                 // Location Preference Logic
-                var indiaData = window._INDIA_DATA || {};
-                var locationPrefs = window._LOCATION_PREFS || [];
+                var indiaData = {};
+                var locationPrefs = [];
 
                 function initLocationPreference() {
                     const stateList = document.getElementById('state-list');
