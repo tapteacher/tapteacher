@@ -1064,7 +1064,12 @@
                             'Content-Type': 'application/json'
                         }
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => { throw new Error('Status ' + response.status + ': ' + text.substring(0, 500)); });
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (btn) {
                             btn.disabled = false;
@@ -1074,11 +1079,12 @@
                             locationPrefs = [];
                             initLocationPreference();
                         } else {
-                            console.error('API Error: ' + data.message);
+                            alert('API Error: ' + (data.message || 'Unknown error'));
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
+                        alert('An error occurred: ' + (error.message || 'Unknown network error'));
                         if (btn) {
                             btn.disabled = false;
                             btn.textContent = "Erase History";
@@ -1238,7 +1244,12 @@
                         },
                         body: JSON.stringify({ state, district, categories, subjects })
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => { throw new Error('Status ' + response.status + ': ' + text.substring(0, 500)); });
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.success) {
                             const existing = locationPrefs.find(p => p.state === state && p.district === district);
@@ -1251,14 +1262,14 @@
                             alert('Preference saved successfully!');
                             showDistricts(state);
                         } else {
-                            alert('Error: ' + data.message);
+                            alert('Error: ' + (data.message || 'Unknown error from server'));
                             btn.disabled = false;
                             btn.textContent = 'Save Location Preference';
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('An error occurred while saving.');
+                        alert('An error occurred: ' + (error.message || 'Unknown network error'));
                         btn.disabled = false;
                         btn.textContent = 'Save Location Preference';
                     });

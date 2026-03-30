@@ -1659,15 +1659,16 @@ def save_location_preference(request):
                 return JsonResponse({'success': False, 'message': 'State and District are required'})
             
             from .models import UserVerification
-            verification, _ = UserVerification.objects.get_or_create(user=request.user)
-            prefs = verification.location_preferences or []
+            v, _ = UserVerification.objects.get_or_create(user=request.user)
+            # Create a NEW list to ensure change detection
+            prefs = list(v.location_preferences or [])
             
             # Update existing if state/district matches, otherwise append
             updated = False
             for p in prefs:
                 if p.get('state') == state and p.get('district') == district:
                     p['categories'] = categories
-                    p['subjects'] = subjects # New
+                    p['subjects'] = subjects
                     updated = True
                     break
             
@@ -1676,16 +1677,18 @@ def save_location_preference(request):
                     'state': state,
                     'district': district,
                     'categories': categories,
-                    'subjects': subjects # New
+                    'subjects': subjects
                 })
                 
-            verification.location_preferences = prefs
-            verification.save()
+            v.location_preferences = prefs
+            v.save()
             return JsonResponse({'success': True})
         except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)})
+            import traceback
+            error_details = traceback.format_exc()
+            return JsonResponse({'success': False, 'message': f"{str(e)}\n{error_details}"}, status=500)
             
-    return JsonResponse({'success': False, 'message': 'Invalid method'})
+    return JsonResponse({'success': False, 'message': 'Invalid method'}, status=405)
 
 @csrf_exempt
 @login_required(login_url='login_view')
@@ -1693,14 +1696,15 @@ def erase_location_preference(request):
     if request.method == 'POST':
         try:
             from .models import UserVerification
-            verification, _ = UserVerification.objects.get_or_create(user=request.user)
-            verification.location_preferences = []
-            verification.save()
+            v, _ = UserVerification.objects.get_or_create(user=request.user)
+            v.location_preferences = []
+            v.save()
             return JsonResponse({'success': True})
         except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)})
+            import traceback
+            return JsonResponse({'success': False, 'message': f"{str(e)}\n{traceback.format_exc()}"}, status=500)
             
-    return JsonResponse({'success': False, 'message': 'Invalid method'})
+    return JsonResponse({'success': False, 'message': 'Invalid method'}, status=405)
 
 @csrf_exempt
 @login_required(login_url='login_view')
