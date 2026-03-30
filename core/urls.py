@@ -43,4 +43,6 @@ urlpatterns = [
     path('manage/chat/<int:user_id>/send/', views.admin_send_message, name='admin_send_message'),
     path('user/send-message/', views.user_send_message, name='user_send_message'),
     path('api/mark-chat-read/', views.mark_chat_read, name='mark_chat_read'),
+    path('api/save-location-preference/', views.save_location_preference, name='save_location_preference'),
+    path('api/erase-location-preference/', views.erase_location_preference, name='erase_location_preference'),
 ]
