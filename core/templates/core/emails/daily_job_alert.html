@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .header { background: #1a1a1a; padding: 25px 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px; }
+        .content { padding: 30px 25px; color: #333333; line-height: 1.6; }
+        .job-card { background: #fafafa; border: 1px solid #eaeaea; border-radius: 6px; padding: 20px; margin-bottom: 20px; }
+        .job-title { font-size: 18px; font-weight: bold; color: #1a1a1a; margin: 0 0 10px 0; }
+        .job-detail { font-size: 14px; margin: 5px 0; color: #555; }
+        .btn-green { display: inline-block; background-color: #4CAF50; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 4px; font-weight: bold; font-size: 14px; margin-top: 15px; text-align: center; }
+        .footer { background: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eeeeee; font-size: 12px; color: #888888; }
+        .footer a { color: #4CAF50; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div style="padding: 20px 0;">
+        <div class="container">
+            <div class="header">
+                <h1>TAPTEACHER</h1>
+            </div>
+            
+            <div class="content">
+                <p style="font-size: 16px;">Hi {{ user_name }},</p>
+                <p style="font-size: 15px;">Great news! We found {% if matched_posts|length == 1 %}a new teaching vacancy{% else %}{{ matched_posts|length }} new teaching vacancies{% endif %} that perfectly match your Location and Category preferences.</p>
+                
+                <h3 style="border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-top: 30px; font-size: 16px; color: #4CAF50;">Your Matches:</h3>
+                
+                {% for post in matched_posts %}
+                <div class="job-card">
+                    <h4 class="job-title">{{ post.subject|title }} Teacher</h4>
+                    <p class="job-detail"><strong>📍 Location:</strong> {{ post.vacancy.institute.district|title }}, {{ post.vacancy.institute.state|title }}</p>
+                    <p class="job-detail"><strong>🏫 School Type:</strong> {{ post.get_category_display }} Vacancy</p>
+                    <p class="job-detail" style="margin-top: 15px;">Because you are one of our active teachers, we wanted to notify you first.</p>
+                    
+                    <div style="text-align: left;">
+                        <a href="{{ domain }}/state/{{ post.vacancy.institute.state|urlencode }}/{{ post.vacancy.institute.district|urlencode }}/{{ post.vacancy.institute.name|urlencode }}/vacancy/{{ post.subject|urlencode }}/" class="btn-green">
+                            View Details & Apply Now
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <p style="margin-top: 30px; font-size: 14px;">Tap the button to view the full details of the institute and apply immediately before the position is filled!</p>
+                <p style="font-size: 14px; margin-top: 5px;">Best of luck,<br>The TapTeacher Team</p>
+            </div>
+            
+            <div class="footer">
+                <p>You are receiving this email because you registered for job alerts on <a href="{{ domain }}">TapTeacher.in</a>.</p>
+                <p>If you no longer wish to receive job matches, you can <a href="{{ domain }}/user-dashboard/">update your preferences</a> on your dashboard or reply "UNSUBSCRIBE" to this email.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

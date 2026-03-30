@@ -84,6 +84,11 @@ class VacancyPost(models.Model):
     ]
     vacancy = models.ForeignKey(Vacancy, on_delete=models.CASCADE, related_name='posts')
     category = models.CharField(max_length=20, choices=POST_CATEGORY_CHOICES)
+    
+    # Alert Tracking
+    alert_emails_sent = models.BooleanField(default=False, help_text="Checked if daily alert script has already processed this post.")
+    
+
     subject = models.CharField(max_length=100)
     qualification = models.TextField(blank=True, default="NA")
     compensation = models.TextField(blank=True, default="NA")
@@ -213,6 +218,14 @@ class UserVerification(models.Model):
     
     # Track when user last visited syllabus for notification blinking
     last_syllabus_visit = models.DateTimeField(blank=True, null=True)
+    
+    # Store user's preferred locations and categories
+    # Format: [{"state": "...", "district": "...", "categories": [...]}, ...]
+    location_preferences = models.JSONField(default=list, blank=True)
+    
+    # Engagement Tracking for Daily Alerts
+    alert_engagement_score = models.IntegerField(default=0, help_text="Number of times user explicitly applied to jobs.")
+    viewed_vacancies = models.ManyToManyField(VacancyPost, blank=True, related_name='viewed_by_users', help_text="Jobs proactively viewed before alert sending.")
     
     updated_at = models.DateTimeField(auto_now=True)
 

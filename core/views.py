@@ -285,19 +285,26 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
     ).order_by('-vacancy__created_at').first()
 
     if post:
+        if request.user.is_authenticated:
+            try:
+                if hasattr(request.user, 'verification'):
+                    request.user.verification.viewed_vacancies.add(post)
+            except Exception:
+                pass
+                
         qualification = post.qualification
         compensation = post.compensation
         eligibility = post.eligibility
         age_limit = post.age_limit
-        app_link = post.vacancy.application_link
+        app_link = post.vacancy.application_link or ""
         post_id = post.id
     else:
-        # Fallback for mock data
-        qualification = "NA"
+        # Fallback for deleted vacancy when user clicks from email
+        return render(request, 'core/vacancy_closed.html')
         compensation = "NA"
         eligibility = "NA"
         age_limit = "NA"
-        app_link = "#"
+        app_link = ""
         post_id = None
 
     # Category display name
@@ -310,8 +317,18 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
     category_title = category_titles.get(category, 'Other')
     vacancy_type_label = vacancy_type.upper()
     
-    # Generate Mailto Link
-    mailto_link = generate_mailto_link(request, vacancy_type, subject_name, app_link)
+    # Determine if application link is an email
+    app_link_str = str(app_link).strip()
+    is_email = '@' in app_link_str and not app_link_str.lower().startswith('http')
+    
+    # Generate Mailto Link ONLY if it's an email
+    if is_email:
+        mailto_link = generate_mailto_link(request, vacancy_type, subject_name, app_link_str)
+    else:
+        mailto_link = ""
+        # Ensure URLs have http/https prefix if it looks like a domain
+        if app_link_str and not app_link_str.lower().startswith('http') and not is_email:
+            app_link = "https://" + app_link_str
 
     return render(request, 'core/vacancy_detail.html', {
         'state_name': state_name,
@@ -325,6 +342,7 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
         'eligibility': eligibility,
         'age_limit': age_limit,
         'application_link': app_link,
+        'is_email': is_email,
         'post_id': post_id,
         'mailto_link': mailto_link
     })
@@ -762,6 +780,9 @@ def edit_vacancy(request, vacancy_id):
         vacancy.save()
         
         # Update Posts: Delete all old posts and recreate from form
+        # New VacancyPost objects default to alert_emails_sent=False,
+        # and vacancy.created_at was just reset to now() above —
+        # so the 10-minute countdown starts fresh automatically on re-submit.
         vacancy.posts.all().delete()
         
         categories = request.POST.getlist('post_category[]')
@@ -868,7 +889,12 @@ def user_dashboard(request, user_id=None):
             dob_str = request.POST.get('dob')
             if dob_str:
                 from datetime import datetime
-                verification.dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
+                try:
+                    verification.dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
+                except ValueError:
+                    verification.dob = None
+            else:
+                verification.dob = None
             
             verification.additional_email = request.POST.get('additional_email')
             verification.highest_qual_desc = request.POST.get('highest_qual_desc')
@@ -930,7 +956,9 @@ def user_dashboard(request, user_id=None):
         'target_user': target_user,
         'user_messages': user_messages,
         'unread_chat_count': unread_chat_count,
-        'user_full_name': verification.full_name or target_user.email # Override header name
+        'user_full_name': verification.full_name or target_user.email, # Override header name
+        'india_data': json.dumps(INDIA_DATA),
+        'location_preferences': json.dumps(verification.location_preferences or [])
     })
 
 def apply_to_vacancy(request, post_id):
@@ -951,10 +979,17 @@ def apply_to_vacancy(request, post_id):
                 vacancy_post=vacancy_post,
                 defaults={'status': 'applied'}
             )
-            # Update status (do not update timestamp to preserve original date)
+            # Update status
             app.status = 'applied'
-            # app.applied_at = timezone.now() -- Removed to fix date issue
             app.save()
+            
+            # Engagement Tracking for Daily Email Alerts
+            try:
+                if hasattr(request.user, 'verification'):
+                    request.user.verification.alert_engagement_score += 1
+                    request.user.verification.save()
+            except Exception:
+                pass
                 
             return JsonResponse({'success': True, 'message': 'Application saved!'})
         except VacancyPost.DoesNotExist:
@@ -1598,40 +1633,83 @@ def toggle_vacancy_read(request, vacancy_id):
             if action == 'mark_read':
                 # Mark ALL school vacancies as read
                 for v in school_vacancies:
-                    UserReadVacancy.objects.get_or_create(
-                        user=request.user,
-                        vacancy_id=v.id
-                    )
-                return JsonResponse({
-                    'success': True,
-                    'message': f'Marked {school_vacancies.count()} vacancies as read'
-                })
-                
+                    UserReadVacancy.objects.get_or_create(user=request.user, vacancy=v)
             elif action == 'mark_unread':
-                # Remove ALL school vacancies from read list
-                deleted_count = UserReadVacancy.objects.filter(
-                    user=request.user,
-                    vacancy_id__in=school_vacancies.values_list('id', flat=True)
-                ).delete()[0]
-                return JsonResponse({
-                    'success': True,
-                    'message': f'Unmarked {deleted_count} vacancies'
-                })
-            else:
-                return JsonResponse({'success': False, 'message': 'Invalid action'}, status=400)
-                
+                # Remove read records for all school vacancies
+                UserReadVacancy.objects.filter(user=request.user, vacancy__in=school_vacancies).delete()
+            
+            return JsonResponse({'success': True})
         except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=400)
-    
-    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+            return JsonResponse({'success': False, 'message': str(e)})
+            
+    return JsonResponse({'success': False, 'message': 'Invalid method'})
 
+@csrf_exempt
+@login_required(login_url='login_view')
+def save_location_preference(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            state = data.get('state')
+            district = data.get('district')
+            categories = data.get('categories', [])
+            subjects = data.get('subjects', {}) # New: subjects object
+            
+            if not state or not district:
+                return JsonResponse({'success': False, 'message': 'State and District are required'})
+            
+            verification = request.user.verification
+            prefs = verification.location_preferences or []
+            
+            # Update existing if state/district matches, otherwise append
+            updated = False
+            for p in prefs:
+                if p.get('state') == state and p.get('district') == district:
+                    p['categories'] = categories
+                    p['subjects'] = subjects # New
+                    updated = True
+                    break
+            
+            if not updated:
+                prefs.append({
+                    'state': state,
+                    'district': district,
+                    'categories': categories,
+                    'subjects': subjects # New
+                })
+                
+            verification.location_preferences = prefs
+            verification.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+            
+    return JsonResponse({'success': False, 'message': 'Invalid method'})
 
+@csrf_exempt
+@login_required(login_url='login_view')
+def erase_location_preference(request):
+    if request.method == 'POST':
+        try:
+            from .models import UserVerification
+            try:
+                verification = UserVerification.objects.get(user=request.user)
+                verification.location_preferences = []
+                verification.save()
+            except UserVerification.DoesNotExist:
+                pass
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+            
+    return JsonResponse({'success': False, 'message': 'Invalid method'})
+
+@csrf_exempt
 @login_required(login_url='login_view')
 def mark_chat_read(request):
     """API to mark all admin messages as read for the current user"""
     if request.method == 'POST':
         from .models import ChatMessage
-        from django.http import JsonResponse
         ChatMessage.objects.filter(user=request.user, sender_is_admin=True, is_read=False).update(is_read=True)
-        return JsonResponse({'status': 'success'})
-    return JsonResponse({'status': 'error'}, status=400)
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
