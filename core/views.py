@@ -1658,7 +1658,8 @@ def save_location_preference(request):
             if not state or not district:
                 return JsonResponse({'success': False, 'message': 'State and District are required'})
             
-            verification = request.user.verification
+            from .models import UserVerification
+            verification, _ = UserVerification.objects.get_or_create(user=request.user)
             prefs = verification.location_preferences or []
             
             # Update existing if state/district matches, otherwise append
@@ -1692,12 +1693,9 @@ def erase_location_preference(request):
     if request.method == 'POST':
         try:
             from .models import UserVerification
-            try:
-                verification = UserVerification.objects.get(user=request.user)
-                verification.location_preferences = []
-                verification.save()
-            except UserVerification.DoesNotExist:
-                pass
+            verification, _ = UserVerification.objects.get_or_create(user=request.user)
+            verification.location_preferences = []
+            verification.save()
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)})
