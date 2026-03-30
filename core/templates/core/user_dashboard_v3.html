@@ -63,7 +63,7 @@
                                         style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Full
                                         Name</label>
                                     <input type="text" name="full_name" value="{{ verification.full_name }}"
-                                        placeholder="Your full name" required
+                                        placeholder="Your full name" 
                                         style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
                                 </div>
                                 <div class="form-group" style="flex: 1;">
@@ -71,7 +71,7 @@
                                         style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Phone
                                         Number</label>
                                     <input type="text" name="phone_number" value="{{ verification.phone_number }}"
-                                        placeholder="Your phone number" required
+                                        placeholder="Your phone number" 
                                         style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;">
                                 </div>
                             </div>
@@ -83,19 +83,19 @@
                                         style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Date
                                         of Birth</label>
                                     <input type="date" name="dob" id="dob-input"
-                                        value="{{ verification.dob|date:'Y-m-d' }}" required
+                                        value="{{ verification.dob|date:'Y-m-d' }}" 
                                         style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px;"
                                         onchange="updateUniqueNumber()">
                                 </div>
                                 <div class="form-group" style="flex: 1;">
                                     <label
                                         style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">Gender</label>
-                                    <select name="gender" required
+                                    <select name="gender" 
                                         style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; font-size: 14px; appearance: none;">
                                         <option value="" hidden>Select Gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Other">Other</option>
+                                        <option value="Male" {% if verification.gender == 'Male' %}selected{% endif %}>Male</option>
+                                        <option value="Female" {% if verification.gender == 'Female' %}selected{% endif %}>Female</option>
+                                        <option value="Other" {% if verification.gender == 'Other' %}selected{% endif %}>Other</option>
                                     </select>
                                 </div>
                             </div>
@@ -127,6 +127,27 @@
                                 <input type="text" id="unique-number-display" value="{{ verification.unique_number }}"
                                     readonly placeholder="Auto-generated from DOB"
                                     style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; color: #2e7d32; font-weight: 600; font-size: 14px;">
+                            </div>
+
+                            <!-- New: Location Categories Preference -->
+                            <div class="section-block" style="margin-bottom: 30px;">
+                                <label
+                                    style="display: block; font-weight: 700; margin-bottom: 12px; color: #000; font-size: 15px;">Location Categories Preference</label>
+                                <div id="location-preference-container" style="border: 1px solid #e0e0e0; border-radius: 8px; background: #fff; overflow: hidden;">
+                                    <div class="tab-nav" style="border-bottom: 1px solid #e0e0e0; background: #f8f8f8; display: flex; justify-content: space-between; align-items: center; padding-right: 15px;">
+                                        <button type="button" class="tab-btn active" style="padding: 12px 20px; font-size: 14px; text-align: left; flex: none; cursor: default; border-bottom: none;">Select Location for Categories</button>
+                                        <button type="button" class="erase-history-btn" id="erase-btn-id" onclick="performErase(); return false;">Erase History</button>
+                                    </div>
+                                    <div id="location-view-area" style="padding: 20px; max-height: 250px; overflow-y: auto;">
+                                        <!-- Content populated by JS -->
+                                        <div id="state-list" class="location-grid"></div>
+                                        <div id="district-list" class="location-grid" style="display: none;"></div>
+                                        <div id="category-list" style="display: none;"></div>
+                                    </div>
+                                </div>
+                                <!-- Safe JSON data holders -->
+                                <div id="india-data-holder" data-india='{{ india_data|escapejs }}' style="display:none;"></div>
+                                <div id="prefs-data-holder" data-prefs='{{ location_preferences|escapejs }}' style="display:none;"></div>
                             </div>
 
                             <!-- Highest Qualification -->
@@ -667,6 +688,259 @@
                         opacity: 1;
                     }
                 }
+
+                /* Location Preference Styles */
+                .location-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                    gap: 12px;
+                }
+
+                .location-item {
+                    background: #f9f9f9;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 6px;
+                    padding: 12px 16px;
+                    font-size: 14px;
+                    color: #333;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    text-align: center;
+                }
+
+                .location-item:hover {
+                    background: white;
+                    transform: translateY(-3px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                    border-color: #333;
+                }
+
+                .back-link {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 8px 16px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 4px;
+                    background: white;
+                    color: #333;
+                    text-decoration: none;
+                    font-size: 13px;
+                    cursor: pointer;
+                    margin-bottom: 15px;
+                    transition: all 0.2s ease;
+                }
+
+                .back-link:hover {
+                    background: #f0f0f0;
+                    transform: translateY(-1px);
+                }
+
+                #location-view-area::-webkit-scrollbar {
+                    width: 6px;
+                }
+                #location-view-area::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                }
+                #location-view-area::-webkit-scrollbar-thumb {
+                    background: #ccc;
+                    border-radius: 10px;
+                }
+                #location-view-area::-webkit-scrollbar-thumb:hover {
+                    background: #999;
+                }
+
+                .category-selection-container {
+                    background: white;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    padding: 5px;
+                }
+
+                .category-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px 15px;
+                    border-bottom: 1px solid #f0f0f0;
+                }
+
+                .category-row:last-child {
+                    border-bottom: none;
+                }
+
+                .category-name {
+                    font-size: 15px;
+                    color: #333;
+                    font-weight: 500;
+                }
+
+                /* Custom Black/White Checkbox */
+                .custom-checkbox {
+                    display: block;
+                    position: relative;
+                    width: 24px;
+                    height: 24px;
+                    cursor: pointer;
+                    user-select: none;
+                }
+
+                .custom-checkbox input {
+                    position: absolute;
+                    opacity: 0;
+                    cursor: pointer;
+                    height: 0;
+                    width: 0;
+                }
+
+                .checkmark {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    height: 24px;
+                    width: 24px;
+                    background-color: white;
+                    border: 2px solid #333;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                }
+
+                .custom-checkbox:hover input ~ .checkmark {
+                    background-color: #f0f0f0;
+                }
+
+                .custom-checkbox input:checked ~ .checkmark {
+                    background-color: #333;
+                }
+
+                .checkmark:after {
+                    content: "";
+                    position: absolute;
+                    display: none;
+                }
+
+                .custom-checkbox input:checked ~ .checkmark:after {
+                    display: block;
+                }
+
+                .custom-checkbox .checkmark:after {
+                    left: 8px;
+                    top: 3px;
+                    width: 6px;
+                    height: 12px;
+                    border: solid white;
+                    border-width: 0 3px 3px 0;
+                    transform: rotate(45deg);
+                }
+
+                .save-pref-btn {
+                    background: #000;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .save-pref-btn:hover {
+                    background: #333;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                }
+
+                .save-pref-btn:disabled {
+                    background: #ccc;
+                    cursor: not-allowed;
+                    transform: none;
+                }
+
+                .erase-history-btn {
+                    background: transparent;
+                    border: 1px solid #333;
+                    border-radius: 4px;
+                    padding: 4px 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #333;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .erase-history-btn:hover {
+                    background: #333;
+                    color: white;
+                }
+
+                .subject-preferences-container {
+                    margin-top: 25px;
+                    border-top: 1px solid #eee;
+                    padding-top: 20px;
+                }
+
+                .subject-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    margin-bottom: 15px;
+                }
+
+                .subject-label {
+                    width: 60px;
+                    font-weight: 700;
+                    font-size: 14px;
+                    color: #000;
+                    flex-shrink: 0;
+                }
+
+                .subject-inputs-scroll {
+                    display: flex;
+                    gap: 10px;
+                    overflow-x: auto;
+                    padding-bottom: 5px;
+                    flex-grow: 1;
+                    min-width: 0;
+                    scrollbar-width: thin;
+                }
+
+                .subject-inputs-scroll::-webkit-scrollbar {
+                    height: 4px;
+                }
+
+                .subject-inputs-scroll::-webkit-scrollbar-thumb {
+                    background: #ccc;
+                    border-radius: 10px;
+                }
+
+                .subject-box {
+                    min-width: 120px;
+                    padding: 8px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    color: #333;
+                    background: #fff;
+                }
+
+                .add-subject-btn {
+                    background: #f0f0f0;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    padding: 8px 15px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #333;
+                    cursor: pointer;
+                    flex-shrink: 0;
+                    transition: all 0.2s;
+                    white-space: nowrap;
+                }
+
+                .add-subject-btn:hover {
+                    background: #e0e0e0;
+                }
             </style>
 
             <script>
@@ -738,7 +1012,250 @@
                     if (hash && ['verification', 'applied', 'pending', 'chat'].includes(hash)) {
                         switchTab(hash);
                     }
+
+                    // Initialize Location Preference
+                    initLocationPreference();
                 });
+
+                // Location Preference Logic
+                const indiaData = JSON.parse(document.getElementById('india-data-holder').getAttribute('data-india') || '{}');
+                let locationPrefs = JSON.parse(document.getElementById('prefs-data-holder').getAttribute('data-prefs') || '[]');
+
+                function initLocationPreference() {
+                    const stateList = document.getElementById('state-list');
+                    const districtList = document.getElementById('district-list');
+                    const categoryList = document.getElementById('category-list');
+                    const states = Object.keys(indiaData).sort();
+                    
+                    stateList.style.display = 'grid';
+                    districtList.style.display = 'none';
+                    categoryList.style.display = 'none';
+
+                    stateList.innerHTML = '';
+                    states.forEach(state => {
+                        const item = document.createElement('div');
+                        item.className = 'location-item';
+                        // Indicator if state has any preference
+                        const hasPrefs = locationPrefs.some(p => p.state === state);
+                        item.innerHTML = state + (hasPrefs ? ' <span style="color:#000; font-size:12px;">●</span>' : '');
+                        item.onclick = () => showDistricts(state);
+                        stateList.appendChild(item);
+                    });
+                }
+
+                function performErase() {
+                    const btn = document.getElementById('erase-btn-id');
+                    if(btn) {
+                        btn.disabled = true;
+                        btn.textContent = "Erasing...";
+                    }
+
+                    fetch('/api/erase-location-preference/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = "Erase History";
+                        }
+                        if (data.success) {
+                            locationPrefs = [];
+                            initLocationPreference();
+                        } else {
+                            console.error('API Error: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = "Erase History";
+                        }
+                    });
+                }
+
+                function showDistricts(state) {
+                    const stateList = document.getElementById('state-list');
+                    const districtList = document.getElementById('district-list');
+                    const categoryList = document.getElementById('category-list');
+                    const districts = indiaData[state] || [];
+
+                    stateList.style.display = 'none';
+                    categoryList.style.display = 'none';
+                    districtList.style.display = 'grid';
+                    
+                    districtList.innerHTML = `
+                        <div style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div class="back-link" onclick="initLocationPreference()" style="margin-bottom: 0;">← Back to States</div>
+                            <div style="font-weight: 600; font-size: 14px;">Districts in ${state}</div>
+                        </div>
+                    `;
+
+                    districts.sort().forEach(dist => {
+                        const item = document.createElement('div');
+                        item.className = 'location-item';
+                        const hasPrefs = locationPrefs.some(p => p.state === state && p.district === dist);
+                        item.innerHTML = dist + (hasPrefs ? ' <span style="color:#000; font-size:12px;">●</span>' : '');
+                        item.onclick = () => showCategories(state, dist);
+                        districtList.appendChild(item);
+                    });
+
+                    document.getElementById('location-view-area').scrollTop = 0;
+                }
+
+                function showCategories(state, district) {
+                    const districtList = document.getElementById('district-list');
+                    const categoryList = document.getElementById('category-list');
+                    
+                    districtList.style.display = 'none';
+                    categoryList.style.display = 'block';
+
+                    const categories = [
+                        { id: 'govt', name: 'Government School Vacancy' },
+                        { id: 'semi', name: 'Semi-Government School Vacancy' },
+                        { id: 'private', name: 'Private School Vacancy' },
+                        { id: 'coaching', name: 'Private Coaching and Tuition Vacancy' }
+                    ];
+
+                    const existing = locationPrefs.find(p => p.state === state && p.district === district);
+                    const selectedCategories = existing ? existing.categories : [];
+                    const selectedSubjects = (existing && existing.subjects) ? existing.subjects : { 'PRT': [], 'TGT': [], 'PGT': [], 'Others': [] };
+
+                    categoryList.innerHTML = `
+                        <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="back-link" onclick="showDistricts('${state}')" style="margin-bottom: 0;">← Back to District</div>
+                            <div style="font-weight: 600; font-size: 14px;">${district}, ${state}</div>
+                        </div>
+                        <div class="category-selection-container">
+                            ${categories.map(cat => `
+                                <div class="category-row">
+                                    <span class="category-name">${cat.name}</span>
+                                    <label class="custom-checkbox">
+                                        <input type="checkbox" name="cat-checkbox" value="${cat.id}" ${selectedCategories.includes(cat.id) ? 'checked' : ''}>
+                                        <span class="checkmark"></span>
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="subject-preferences-container">
+                            ${['PRT', 'TGT', 'PGT', 'Others'].map(type => `
+                                <div class="subject-row" data-type="${type}">
+                                    <div class="subject-label">${type}</div>
+                                    <div class="subject-inputs-scroll" id="subjects-${type}">
+                                        <!-- Inputs populated below -->
+                                    </div>
+                                    <button type="button" class="add-subject-btn" onclick="addSubjectBox(event, '${type}')">Add Subject</button>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div style="margin-top: 20px; text-align: right;">
+                            <button class="save-pref-btn" onclick="saveLocationPrefs('${state}', '${district}')">Save Location Preference</button>
+                        </div>
+                    `;
+                    
+                    // Populate subject boxes
+                    ['PRT', 'TGT', 'PGT', 'Others'].forEach(type => {
+                        const vals = selectedSubjects[type] || [];
+                        // Always show at least 2 boxes, but cap at 4
+                        const count = Math.min(4, Math.max(2, vals.length));
+                        for (let i = 0; i < count; i++) {
+                            addSubjectBox(null, type, vals[i] || '');
+                        }
+                    });
+
+                    document.getElementById('location-view-area').scrollTop = 0;
+                }
+
+                function addSubjectBox(event, type, value = '') {
+                    if (event) event.preventDefault();
+                    
+                    const container = document.getElementById(`subjects-${type}`);
+                    if (!container) return;
+                    
+                    const currentCount = container.querySelectorAll('.subject-box').length;
+                    
+                    if (currentCount >= 4) {
+                        alert('You can only add up to 4 subjects for this category.');
+                        return;
+                    }
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'subject-box';
+                    input.placeholder = 'Subject name';
+                    input.value = value;
+                    container.appendChild(input);
+                    
+                    // Check if we reached 4, if so hide the Add Subject button
+                    if (currentCount + 1 >= 4) {
+                        const btn = container.parentElement.querySelector('.add-subject-btn');
+                        if (btn) btn.style.display = 'none';
+                    }
+
+                    // auto scroll to end
+                    container.scrollLeft = container.scrollWidth;
+                }
+
+                function saveLocationPrefs(state, district) {
+                    const checkboxes = document.querySelectorAll('.category-selection-container input[name="cat-checkbox"]:checked');
+                    const categories = Array.from(checkboxes).map(cb => cb.value);
+                    
+                    // Collect subjects
+                    const subjects = {};
+                    ['PRT', 'TGT', 'PGT', 'Others'].forEach(type => {
+                        const inputs = document.querySelectorAll(`#subjects-${type} .subject-box`);
+                        subjects[type] = Array.from(inputs).map(i => i.value.trim()).filter(v => v !== '');
+                    });
+
+                    if (categories.length === 0) {
+                        alert('Please select at least one category');
+                        return;
+                    }
+
+                    const btn = document.querySelector('.save-pref-btn');
+                    btn.disabled = true;
+                    btn.textContent = 'Saving...';
+
+                    fetch('/api/save-location-preference/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ state, district, categories, subjects })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const existing = locationPrefs.find(p => p.state === state && p.district === district);
+                            if (existing) {
+                                existing.categories = categories;
+                                existing.subjects = subjects;
+                            } else {
+                                locationPrefs.push({ state, district, categories, subjects });
+                            }
+                            alert('Preference saved successfully!');
+                            showDistricts(state);
+                        } else {
+                            alert('Error: ' + data.message);
+                            btn.disabled = false;
+                            btn.textContent = 'Save Location Preference';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while saving.');
+                        btn.disabled = false;
+                        btn.textContent = 'Save Location Preference';
+                    });
+                }
             </script>
         </div>
     </div>
