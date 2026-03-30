@@ -146,8 +146,8 @@
                                     </div>
                                 </div>
                                 <!-- Safe JSON data holders -->
-                                <div id="india-data-holder" data-india='{{ india_data|escapejs }}' style="display:none;"></div>
-                                <div id="prefs-data-holder" data-prefs='{{ location_preferences|escapejs }}' style="display:none;"></div>
+                                <script id="india-data-json" type="application/json">{{ india_data }}</script>
+                                <script id="prefs-data-json" type="application/json">{{ location_preferences }}</script>
                             </div>
 
                             <!-- Highest Qualification -->
@@ -1018,8 +1018,8 @@
                 });
 
                 // Location Preference Logic
-                const indiaData = JSON.parse(document.getElementById('india-data-holder').getAttribute('data-india') || '{}');
-                let locationPrefs = JSON.parse(document.getElementById('prefs-data-holder').getAttribute('data-prefs') || '[]');
+                const indiaData = JSON.parse(document.getElementById('india-data-json').textContent || '{}');
+                let locationPrefs = JSON.parse(document.getElementById('prefs-data-json').textContent || '[]');
 
                 function initLocationPreference() {
                     const stateList = document.getElementById('state-list');
