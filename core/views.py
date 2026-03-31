@@ -194,7 +194,7 @@ def institute_view(request, state_name, district_name, institute_name):
     category = request.GET.get('category', 'govt')
     vacancy_type = request.GET.get('type')  # e.g., 'prt', 'tgt', 'pgt', 'other'
     
-    # Fetch real institute with robust name matching
+    # Fetch real institute
     institute = Institute.objects.filter(
         name=institute_name.strip(),
         state=state_name.strip(),
@@ -275,7 +275,7 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
     category = request.GET.get('category', 'govt')
     vacancy_type = request.GET.get('type', 'other') # Default to other if not specified
 
-    # Fetch specific post with robust name matching
+    # Fetch specific post
     post = VacancyPost.objects.filter(
         vacancy__institute__name=institute_name.strip(),
         vacancy__institute__state=state_name.strip(),

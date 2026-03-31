@@ -8,7 +8,9 @@
 html,
 body {
     height: 100%;
+    /* Force full height */
     overflow: hidden;
+    /* Prevent body scroll */
 }
 
 body {
@@ -67,12 +69,13 @@ a {
 
 /* Main Container - Takes remaining space */
 .main-container {
-    padding: 20px 0 40px 0; /* Removed side padding to move scrollbar to edge */
+    padding: 20px 30px 40px 30px;
     flex-grow: 1;
     /* Fill remaining vertical space */
     display: flex;
     flex-direction: column;
-    overflow-y: auto; /* Allow overflow scrolling if content is tall */
+    overflow: hidden;
+    /* Prevent internal scroll of container */
 }
 
 /* Page Title - Fixed Height */
@@ -103,7 +106,8 @@ a {
     gap: 30px;
     flex-grow: 1;
     /* Fill remaining vertical space */
-    /* Remove overflow: hidden to let the main-container handle the scroll */
+    overflow: hidden;
+    /* Ensure children handle their own scroll/sizing */
 }
 
 /* Sidebar */

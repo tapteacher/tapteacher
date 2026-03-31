@@ -1,7 +1,7 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div class="content-wrapper" style="width: 100%; max-width: 100%; display: block; padding: 20px 0;">
+<div class="content-wrapper" style="width: 100%; max-width: 100%; overflow-y: auto; display: block; padding: 20px 0;">
 
     <!-- Centered Container -->
     <div style="max-width: 1000px; margin: 0 auto; padding: 0 20px; display: flex; flex-direction: column;">
@@ -70,17 +70,10 @@
         <div
             style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; flex-shrink: 0; flex-wrap: wrap;">
 
-            {% if is_email %}
             <a href="javascript:void(0)" id="apply-btn" class="btn-primary hover-lift-strong"
                 style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #4CAF50; border: 1px solid #4CAF50; padding: 12px 30px; border-radius: 4px; color: #fff; font-size: 14px; cursor: pointer; min-width: 140px; text-decoration: none;">
                 Apply via Email
             </a>
-            {% else %}
-            <a href="javascript:void(0)" id="apply-btn" class="btn-primary hover-lift-strong"
-                style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #4CAF50; border: 1px solid #4CAF50; padding: 12px 30px; border-radius: 4px; color: #fff; font-size: 14px; cursor: pointer; min-width: 140px; text-decoration: none;">
-                Apply Now
-            </a>
-            {% endif %}
 
             <!-- Save for Later (JS handled) -->
             <button id="save-btn" class="hover-darken"
@@ -94,16 +87,11 @@
                 Interested</button>
         </div>
 
-        {% if is_email %}
         <p style="margin-top: -20px; margin-bottom: 30px; font-size: 13px; color: #666; text-align: center;">
             <span style="color: #d32f2f;">*</span> Note: Clicking "Apply via Email" will open your email client. Please
             remember to <strong>attach your documents</strong> manually.
         </p>
-        {% else %}
-        <p style="margin-top: -20px; margin-bottom: 30px; font-size: 13px; color: #666; text-align: center;">
-            <span style="color: #d32f2f;">*</span> Note: Clicking "Apply Now" will redirect you to the application website.
-        </p>
-        {% endif %}
+
 
     </div>
 </div>
@@ -159,7 +147,6 @@
         applyBtn.onclick = function (e) {
             e.preventDefault(); // Stop default navigation
 
-            const isEmail = "{{ is_email }}" === "True";
             const appLink = "{{ application_link|escapejs }}";
             const fullMailto = "{{ mailto_link|escapejs }}";
             const postId = "{{ post_id }}";
@@ -171,12 +158,17 @@
 
             // Function to open the link
             const openLink = () => {
-                if (isEmail && fullMailto) {
+                // If the backend generated a valid mailto link with content, prefer that
+                if (fullMailto && fullMailto.startsWith("mailto:")) {
                     window.location.href = fullMailto;
-                } else if (!isEmail && appLink && appLink !== "None" && appLink !== "") {
+                }
+                // Fallback to raw link logic
+                else if (appLink.includes('@') && !appLink.startsWith('http')) {
+                    window.location.href = "mailto:" + appLink;
+                } else if (appLink && appLink !== "#" && appLink !== "None") {
                     window.open(appLink, '_blank');
                 } else {
-                    alert('Application link or email not provided by the institute.');
+                    alert('Application details not provided.');
                 }
 
                 // Reset button
