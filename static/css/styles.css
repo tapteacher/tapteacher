@@ -67,7 +67,7 @@ a {
 
 /* Main Container - Takes remaining space */
 .main-container {
-    padding: 20px 30px 40px 30px;
+    padding: 20px 0 40px 0; /* Removed side padding to move scrollbar to edge */
     flex-grow: 1;
     /* Fill remaining vertical space */
     display: flex;
@@ -104,12 +104,6 @@ a {
     flex-grow: 1;
     /* Fill remaining vertical space */
     /* Remove overflow: hidden to let the main-container handle the scroll */
-}
-
-.institute-detail-wrapper {
-    flex-direction: column;
-    padding-top: 20px;
-    padding-bottom: 40px; /* Extra padding at bottom for better scrolling */
 }
 
 /* Sidebar */
