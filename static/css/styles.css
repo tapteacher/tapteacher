@@ -8,9 +8,7 @@
 html,
 body {
     height: 100%;
-    /* Force full height */
     overflow: hidden;
-    /* Prevent body scroll */
 }
 
 body {
@@ -74,8 +72,7 @@ a {
     /* Fill remaining vertical space */
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    /* Prevent internal scroll of container */
+    overflow-y: auto; /* Allow overflow scrolling if content is tall */
 }
 
 /* Page Title - Fixed Height */
@@ -106,8 +103,13 @@ a {
     gap: 30px;
     flex-grow: 1;
     /* Fill remaining vertical space */
-    overflow: hidden;
-    /* Ensure children handle their own scroll/sizing */
+    /* Remove overflow: hidden to let the main-container handle the scroll */
+}
+
+.institute-detail-wrapper {
+    flex-direction: column;
+    padding-top: 20px;
+    padding-bottom: 40px; /* Extra padding at bottom for better scrolling */
 }
 
 /* Sidebar */
