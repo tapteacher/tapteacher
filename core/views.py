@@ -550,12 +550,12 @@ def admin_dashboard(request):
         
         # Handle "Upload Vacancy" submission
         elif 'upload_vacancy' in request.POST:
-            institute_name = request.POST.get('institute_name')
-            category = request.POST.get('institute_category')
-            state = request.POST.get('state')
-            district = request.POST.get('district')
-            belief = request.POST.get('belief', '')
-            app_link = request.POST.get('application_link')
+            institute_name = request.POST.get('institute_name', '').strip()
+            category = request.POST.get('institute_category', '').strip()
+            state = request.POST.get('state', '').strip()
+            district = request.POST.get('district', '').strip()
+            belief = request.POST.get('belief', '').strip()
+            app_link = request.POST.get('application_link', '').strip()
 
             # Create or update Institute
             institute, _ = Institute.objects.get_or_create(
@@ -756,12 +756,12 @@ def edit_vacancy(request, vacancy_id):
         # This strongly suggests we DELETE the old posts and recreate them, OR update in place.
         # Dropping and recreating posts is easier for sync if the counts change.
         
-        institute_name = request.POST.get('institute_name')
-        category = request.POST.get('institute_category')
-        state = request.POST.get('state')
-        district = request.POST.get('district')
-        belief = request.POST.get('belief', '')
-        app_link = request.POST.get('application_link')
+        institute_name = request.POST.get('institute_name', '').strip()
+        category = request.POST.get('institute_category', '').strip()
+        state = request.POST.get('state', '').strip()
+        district = request.POST.get('district', '').strip()
+        belief = request.POST.get('belief', '').strip()
+        app_link = request.POST.get('application_link', '').strip()
 
         # Update Institute
         inst = vacancy.institute
