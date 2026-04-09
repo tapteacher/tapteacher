@@ -285,6 +285,7 @@
 
     <!-- Left Column -->
     <div class="col-left">
+        {% if 'manage_connect_link' in assigned_roles or is_superadmin %}
         <div class="accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 Manage connect link
@@ -315,6 +316,8 @@
                 </form>
             </div>
         </div>
+        {% endif %}
+        {% if 'upload_syllabus' in assigned_roles or is_superadmin %}
         <div class="accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 Upload Syllabus
@@ -411,6 +414,8 @@
                 </form>
             </div>
         </div>
+        {% endif %}
+        {% if 'upload_vacancy' in assigned_roles or is_superadmin %}
         <div class="accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 Upload Vacancy
@@ -504,6 +509,8 @@
                 </form>
             </div>
         </div>
+        {% endif %}
+        {% if 'submitted_vacancies' in assigned_roles or is_superadmin %}
         <div class="accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 Submitted Vacancies
@@ -527,8 +534,15 @@
                                 {% endfor %}
                             </div>
                             <div style="font-size: 13px; color: #111; margin-top: 8px; font-weight: 500;">📅 Posted:
-                                {{ vac.created_at|date:"d M Y" }} <span style="margin-left: 10px; color: #2e7d32;">👥
-                                    Applicants: {{ vac.total_applicants }}</span></div>
+                                {{ vac.created_at|date:"d M Y" }} 
+                                {% if not is_hr %}
+                                <span style="margin-left: 10px; color: #2e7d32;">👥
+                                    Applicants: {{ vac.total_applicants }}</span>
+                                {% endif %}
+                                {% if is_superadmin and vac.uploaded_by.email != 'pankajyadav5501@gmail.com' %}
+                                <span style="margin-left: 10px; color: #1976D2;">👤 HR: {{ vac.uploaded_by.email }}</span>
+                                {% endif %}
+                            </div>
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
                             <div style="display: flex; gap: 8px;">
@@ -536,10 +550,12 @@
                                     style="padding: 6px 12px; background: white; border: 1px solid #ddd; border-radius: 4px; color: #333; text-decoration: none; font-size: 13px;">Edit</a>
 
                             </div>
+                            {% if not is_hr %}
                             <a href="{% url 'vacancy_applicants' vac.id %}"
                                 style="padding: 8px 16px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; color: #111; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 6px;">
                                 <span>👥</span> Check Applicants
                             </a>
+                            {% endif %}
                         </div>
                     </div>
                     {% empty %}
@@ -548,10 +564,12 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- Right Column -->
     <div class="col-right">
+        {% if 'user_details' in assigned_roles or is_superadmin %}
         <div class="accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 <span style="display: flex; align-items: center; gap: 10px;">👥 User Details</span>
@@ -576,6 +594,8 @@
                 </a>
             </div>
         </div>
+        {% endif %}
+        {% if 'manage_email_templates' in assigned_roles or is_superadmin %}
         <div class="accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 <span style="display: flex; align-items: center; gap: 10px;">📧 Manage Email Templates</span>
@@ -673,6 +693,8 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% if 'user_chats' in assigned_roles or is_superadmin %}
         <div class="accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 <span style="display: flex; align-items: center; gap: 10px;">💬 User Chats</span>
@@ -704,6 +726,83 @@
                 {% endif %}
             </div>
         </div>
+        {% endif %}
+
+        {% if is_superadmin %}
+        <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+                <span style="display: flex; align-items: center; gap: 10px;">🛡️ Role Given</span>
+                <span class="accordion-icon">v</span>
+            </div>
+            <div class="accordion-content" style="display: none; padding: 20px; border-top: 1px solid #f0f0f0; max-height: 500px; overflow-y: auto;">
+                <form id="role-form" action="{% url 'admin_dashboard' %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="save_admin_roles" value="1">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Email ID of HR/Admin</label>
+                            <input type="email" name="hr_email" placeholder="Enter Gmail ID" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; background: #f9f9f9;">
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 20px; align-items: center; margin-top: 20px;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 14px; font-weight: 500; display: block; margin-bottom: 8px;">Available Roles</label>
+                            <select id="available-roles" multiple style="width: 100%; height: 180px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px;">
+                                <option value="manage_connect_link">Manage Connect Link</option>
+                                <option value="upload_syllabus">Upload Syllabus</option>
+                                <option value="upload_vacancy">Upload Vacancy</option>
+                                <option value="submitted_vacancies">Submitted Vacancies</option>
+                                <option value="user_details">User Details</option>
+                                <option value="manage_email_templates">Manage Email Templates</option>
+                                <option value="user_chats">User Chats</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button type="button" onclick="moveRole('available-roles', 'assigned-roles')" style="padding: 8px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: white;">&gt;&gt;</button>
+                            <button type="button" onclick="moveRole('assigned-roles', 'available-roles')" style="padding: 8px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: white;">&lt;&lt;</button>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 14px; font-weight: 500; display: block; margin-bottom: 8px;">Assigned Roles</label>
+                            <select id="assigned-roles" multiple style="width: 100%; height: 180px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px;">
+                            </select>
+                        </div>
+                    </div>
+                    <input type="hidden" name="assigned_roles_json" id="assigned_roles_json">
+                    <input type="hidden" name="delete_admin_roles" id="delete_admin_roles" value="0">
+                    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 15px;">
+                        <button type="button" onclick="deleteRoles()" class="btn-secondary" style="border-color: #d32f2f; color: #d32f2f; background: white; padding: 8px 16px; border-radius: 6px;">Delete ID</button>
+                        <button type="button" onclick="submitRoles()" class="btn-primary" style="display: inline-flex;">Save Roles</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script>
+            function moveRole(fromId, toId) {
+                const fromSelect = document.getElementById(fromId);
+                const toSelect = document.getElementById(toId);
+                const selectedOptions = Array.from(fromSelect.selectedOptions);
+                selectedOptions.forEach(option => {
+                    toSelect.appendChild(option);
+                });
+            }
+            function submitRoles() {
+                const assignedSelect = document.getElementById('assigned-roles');
+                const roles = Array.from(assignedSelect.options).map(opt => opt.value);
+                document.getElementById('assigned_roles_json').value = JSON.stringify(roles);
+                document.getElementById('role-form').submit();
+            }
+            function deleteRoles() {
+                if(confirm('Are you sure you want to delete roles for this HR?')) {
+                    document.getElementById('delete_admin_roles').value = '1';
+                    document.getElementById('role-form').submit();
+                }
+            }
+            document.getElementById('available-roles').addEventListener('dblclick', function() { moveRole('available-roles', 'assigned-roles'); });
+            document.getElementById('assigned-roles').addEventListener('dblclick', function() { moveRole('assigned-roles', 'available-roles'); });
+        </script>
+        {% endif %}
     </div>
     </div>
 

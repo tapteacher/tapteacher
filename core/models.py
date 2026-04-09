@@ -71,6 +71,7 @@ class Vacancy(models.Model):
     application_link = models.CharField(max_length=500)  # Link or Email
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"Vacancy for {self.institute.name}"
@@ -336,3 +337,10 @@ class EmailTemplate(models.Model):
 
     def __str__(self):
         return f"{self.category.upper()} - {self.subject}"
+
+class AdminRole(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='adminrole')
+    roles = models.JSONField(default=list)
+
+    def __str__(self):
+        return f"Roles for {self.user.email}"

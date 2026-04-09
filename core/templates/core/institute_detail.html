@@ -1,9 +1,10 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div class="content-wrapper" style="flex-direction: column; max-width: 1200px; margin: 0 auto; padding-top: 20px; overflow-y: auto; padding-right: 15px; padding-bottom: 20px;">
+<div class="content-wrapper" style="flex-direction: column; max-width: 100%; width: 100%; margin: 0; overflow-y: auto; padding-bottom: 20px;">
+    <div style="max-width: 1200px; margin: 0 auto; width: 100%; padding-top: 20px; padding-right: 15px; padding-left: 15px;">
 
-    <!-- Back Button -->
+        <!-- Back Button -->
     <div style="margin-bottom: 20px;">
         <a href="{% url 'district_view' state_name=state_name district_name=district_name %}?category={{ current_category }}"
             class="btn-header hover-darken"
@@ -26,7 +27,7 @@
         <!-- Our Belief Card -->
         <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 30px;">
             <h2 style="margin: 0 0 15px 0; font-size: 20px; font-weight: 700; color: #000;">Our Belief</h2>
-            <div style="color: #666; font-size: 14px; line-height: 1.5;">
+            <div style="color: #666; font-size: 14px; line-height: 1.5; max-height: 250px; overflow-y: auto; padding-right: 5px;">
                 {{ belief|linebreaks|urlize }}
             </div>
             {% if images %}
@@ -94,6 +95,7 @@
     {% endif %}
     {% endif %}
 
+    </div>
 </div>
 
 {% if images %}

@@ -60,6 +60,12 @@ def notification_flags(request):
     
     base_qs = Vacancy.objects.filter(is_active=True, created_at__gte=ten_days_ago)
     
+    is_hr = False
+    if request.user.is_authenticated and not request.user.is_superuser:
+        if hasattr(request.user, 'adminrole'):
+            is_hr = True
+            base_qs = base_qs.filter(uploaded_by=request.user)
+    
     # If user is logged in, exclude read vacancies
     if request.user.is_authenticated:
         # We can't easily join on UserReadVacancy from Vacancy direct without related_name or subquery.
@@ -130,3 +136,13 @@ def notification_flags(request):
          flags['blink_syllabus'] = topics_query.filter(is_for_everyone=True).exists()
 
     return flags
+
+def is_hr_processor(request):
+    """
+    Context processor to make is_hr flag available globally.
+    """
+    is_hr_val = False
+    if request.user.is_authenticated and not request.user.is_superuser:
+        if hasattr(request.user, 'adminrole'):
+            is_hr_val = True
+    return {'is_hr': is_hr_val}

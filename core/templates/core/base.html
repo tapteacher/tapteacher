@@ -20,13 +20,15 @@
             </div>
             <div class="header-right">
                 <!-- Syllabus link removed as per request -->
-                {% if user.is_authenticated %}
+                {% if user.is_authenticated and not is_hr %}
                 <a href="{% url 'user_dashboard' %}" class="btn-header">{% if user_full_name %}{{ user_full_name }}'s
                     Dashboard{% else %}User Dashboard{% endif %}</a>
                 {% endif %}
-                {% if user.is_authenticated and user.is_superuser %}
-                <a href="{% url 'admin_dashboard' %}" class="btn-header"
-                    style="background-color: #f0f0f0; border-color: #333;">Admin Backend</a>
+                {% if user.is_authenticated %}
+                    {% if user.is_superuser or is_hr %}
+                    <a href="{% url 'admin_dashboard' %}" class="btn-header"
+                        style="background-color: #f0f0f0; border-color: #333;">Admin Backend</a>
+                    {% endif %}
                 {% endif %}
                 {% if user.is_authenticated %}
                 <a href="{% url 'logout_view' %}" class="btn-header"

@@ -84,6 +84,7 @@ TEMPLATES = [
                 'core.context_processors.site_settings',
                 'core.context_processors.user_verification_context',
                 'core.context_processors.notification_flags',
+                'core.context_processors.is_hr_processor',
             ],
         },
     },

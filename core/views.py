@@ -117,7 +117,11 @@ def district_view(request, state_name, district_name):
         institute__district=district_name,
         institute__category=category,
         is_active=True
-    ).select_related('institute').order_by('-created_at') # Sort: Newest first (created_at) or Posted Date?
+    )
+    if request.user.is_authenticated and not request.user.is_superuser and hasattr(request.user, 'adminrole'):
+        vacancies = vacancies.filter(uploaded_by=request.user)
+    
+    vacancies = vacancies.select_related('institute').order_by('-created_at')
     # Usually created_at is better for "New".
     
     # School-Level Grouping and Blinking Logic
@@ -212,7 +216,10 @@ def institute_view(request, state_name, district_name, institute_name):
     else:
         belief = institute.belief or "No belief statement provided."
         # Get latest vacancy for this institute that is active
-        latest_vacancy = institute.vacancies.filter(is_active=True).order_by('-created_at').first()
+        latest_vacancy_qs = institute.vacancies.filter(is_active=True)
+        if request.user.is_authenticated and not request.user.is_superuser and hasattr(request.user, 'adminrole'):
+            latest_vacancy_qs = latest_vacancy_qs.filter(uploaded_by=request.user)
+        latest_vacancy = latest_vacancy_qs.order_by('-created_at').first()
         
         prt_list = []
         tgt_list = []
@@ -276,13 +283,17 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
     vacancy_type = request.GET.get('type', 'other') # Default to other if not specified
 
     # Fetch specific post
-    post = VacancyPost.objects.filter(
+    post_qs = VacancyPost.objects.filter(
         vacancy__institute__name=institute_name.strip(),
         vacancy__institute__state=state_name.strip(),
         vacancy__institute__district=district_name.strip(),
         category=vacancy_type.strip().lower(),
         subject=subject_name.strip().lower()
-    ).order_by('-vacancy__created_at').first()
+    )
+    if request.user.is_authenticated and not request.user.is_superuser and hasattr(request.user, 'adminrole'):
+        post_qs = post_qs.filter(vacancy__uploaded_by=request.user)
+        
+    post = post_qs.order_by('-vacancy__created_at').first()
 
     if post:
         if request.user.is_authenticated:
@@ -457,7 +468,7 @@ def login_view(request):
 
             login(request, user)
             request.session.set_expiry(1209600)  # 2 weeks
-            return redirect('admin_dashboard' if user.is_staff else 'user_dashboard')
+            return redirect('admin_dashboard' if (user.is_staff or hasattr(user, 'adminrole')) else 'user_dashboard')
         else:
             return render(request, 'core/login.html', {
                 'error': 'Invalid credentials',
@@ -495,7 +506,7 @@ def google_login_callback(request):
             # Ensure persistent session
             request.session.set_expiry(1209600) # 2 weeks
             
-            return redirect('user_dashboard' if not user.is_staff else 'admin_dashboard')
+            return redirect('admin_dashboard' if (user.is_staff or hasattr(user, 'adminrole')) else 'user_dashboard')
         except ValueError:
             # Invalid token
             return render(request, 'core/login.html', {'error': 'Invalid Google account'})
@@ -509,8 +520,16 @@ from django.db.models import Count, Q
 
 @login_required(login_url='login_view')
 def admin_dashboard(request):
-    if not request.user.is_superuser:
+    is_superadmin = request.user.is_superuser
+    has_role = hasattr(request.user, 'adminrole')
+    
+    if not (is_superadmin or has_role):
         return redirect('user_dashboard')
+        
+    is_hr = not is_superadmin and has_role
+    assigned_roles = request.user.adminrole.roles if has_role else []
+    if is_superadmin:
+        assigned_roles = ['all']
 
     settings = SiteSettings.objects.first()
     if not settings:
@@ -529,7 +548,11 @@ def admin_dashboard(request):
     email_templates = EmailTemplate.objects.all().order_by('category', 'subject')
 
     # Fetch Submitted Vacancies - Only active ones, annotated with applicant count
-    submitted_vacancies = Vacancy.objects.filter(is_active=True).annotate(
+    submitted_vacancies_qs = Vacancy.objects.filter(is_active=True)
+    if is_hr:
+        submitted_vacancies_qs = submitted_vacancies_qs.filter(uploaded_by=request.user)
+    
+    submitted_vacancies = submitted_vacancies_qs.annotate(
         total_applicants=Count('posts__applications', filter=Q(posts__applications__status='applied'))
     ).order_by('-created_at').select_related('institute')
     
@@ -578,7 +601,8 @@ def admin_dashboard(request):
             # Create Vacancy
             vacancy = Vacancy.objects.create(
                 institute=institute,
-                application_link=app_link
+                application_link=app_link,
+                uploaded_by=request.user
             )
 
             # Create Posts
@@ -729,11 +753,54 @@ def admin_dashboard(request):
             EmailTemplate.objects.filter(id=t_id).delete()
             return redirect('admin_dashboard')
 
+        # Handle "Save Admin Roles"
+        elif 'save_admin_roles' in request.POST:
+            if is_superadmin:
+                hr_email = request.POST.get('hr_email', '').strip()
+                import json
+                roles_json = request.POST.get('assigned_roles_json', '[]')
+                try:
+                    roles = json.loads(roles_json)
+                except ValueError:
+                    roles = []
+                
+                if hr_email:
+                    is_delete = request.POST.get('delete_admin_roles', '0') == '1'
+                    from django.contrib.auth.models import User
+                    
+                    if is_delete:
+                        try:
+                            target_user = User.objects.get(email=hr_email)
+                            from .models import AdminRole
+                            AdminRole.objects.filter(user=target_user).delete()
+                            messages.success(request, f"Roles removed for {hr_email}")
+                        except User.DoesNotExist:
+                            messages.error(request, f"User {hr_email} not found")
+                    else:
+                        # Create or get user
+                        target_user, created = User.objects.get_or_create(
+                            email=hr_email,
+                            defaults={'username': hr_email.split('@')[0]}
+                        )
+                        # Important: Make them staff so they can log in correctly later
+                        target_user.is_staff = True
+                        target_user.save()
+                        
+                        from .models import AdminRole
+                        admin_role, _ = AdminRole.objects.get_or_create(user=target_user)
+                        admin_role.roles = roles
+                        admin_role.save()
+                        messages.success(request, f"Roles updated for {hr_email}")
+            return redirect('admin_dashboard')
+
     return render(request, 'core/admin_dashboard.html', {
         'settings': settings,
         'india_data': INDIA_DATA,
         'submitted_vacancies': submitted_vacancies,
         'email_templates': email_templates,
+        'is_superadmin': is_superadmin,
+        'is_hr': is_hr,
+        'assigned_roles': assigned_roles,
     })
 
 @login_required(login_url='login_view')
