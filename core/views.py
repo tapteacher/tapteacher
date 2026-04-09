@@ -796,21 +796,35 @@ def admin_dashboard(request):
                         except User.DoesNotExist:
                             messages.error(request, f"User {hr_email} not found")
                     else:
-                        # Create or get user
-                        target_user, created = User.objects.get_or_create(
-                            email=hr_email,
-                            defaults={'username': hr_email.split('@')[0]}
-                        )
-                        # Important: Make them staff so they can log in correctly later
-                        target_user.is_staff = True
-                        target_user.save()
+                        # Create or get user by email safely
+                        target_user = User.objects.filter(email=hr_email).first()
+                        if not target_user:
+                            username_base = hr_email.split('@')[0]
+                            username = username_base
+                            # Resolve potential username conflicts
+                            counter = 1
+                            while User.objects.filter(username=username).exists():
+                                username = f"{username_base}{counter}"
+                                counter += 1
+                                
+                            target_user = User.objects.create(
+                                email=hr_email,
+                                username=username,
+                                is_staff=True
+                            )
+                        else:
+                            # Ensure existing user has staff flag to access dashboard
+                            if not target_user.is_staff:
+                                target_user.is_staff = True
+                                target_user.save()
                         
                         from .models import AdminRole
                         admin_role, _ = AdminRole.objects.get_or_create(user=target_user)
                         admin_role.roles = roles
                         admin_role.save()
                         messages.success(request, f"Roles updated for {hr_email}")
-            return redirect('admin_dashboard')
+                
+                return redirect('admin_dashboard')
 
     return render(request, 'core/admin_dashboard.html', {
         'settings': settings,
