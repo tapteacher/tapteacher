@@ -742,7 +742,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Email ID of HR/Admin</label>
-                            <input type="email" name="hr_email" placeholder="Enter Gmail ID" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; background: #f9f9f9;">
+                            <input type="email" id="hr-email-input" name="hr_email" placeholder="Enter Gmail ID" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; background: #f9f9f9;">
                         </div>
                     </div>
                     
@@ -794,11 +794,46 @@
                 document.getElementById('role-form').submit();
             }
             function deleteRoles() {
-                if(confirm('Are you sure you want to delete roles for this HR?')) {
+                const email = document.getElementById('hr-email-input').value;
+                if(!email) { alert('Please enter an email first'); return; }
+                if(confirm(`Are you sure you want to delete ALL roles for ${email}?`)) {
                     document.getElementById('delete_admin_roles').value = '1';
                     document.getElementById('role-form').submit();
                 }
             }
+            
+            // Auto-populate logic
+            const emailInput = document.getElementById('hr-email-input');
+            let debounceTimer;
+
+            emailInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const email = this.value.trim();
+                    if (email.includes('@') && email.includes('.')) {
+                        fetch(`/api/get-admin-roles/?email=${encodeURIComponent(email)}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success) {
+                                    resetRoles(); // Move everything back to available
+                                    data.roles.forEach(roleValue => {
+                                        const option = document.querySelector(`#available-roles option[value="${roleValue}"]`);
+                                        if (option) {
+                                            document.getElementById('assigned-roles').appendChild(option);
+                                        }
+                                    });
+                                }
+                            });
+                    }
+                }, 500); // Wait for user to stop typing
+            });
+
+            function resetRoles() {
+                const available = document.getElementById('available-roles');
+                const assigned = document.getElementById('assigned-roles');
+                Array.from(assigned.options).forEach(opt => available.appendChild(opt));
+            }
+
             document.getElementById('available-roles').addEventListener('dblclick', function() { moveRole('available-roles', 'assigned-roles'); });
             document.getElementById('assigned-roles').addEventListener('dblclick', function() { moveRole('assigned-roles', 'available-roles'); });
         </script>

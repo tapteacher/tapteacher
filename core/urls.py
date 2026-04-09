@@ -45,4 +45,5 @@ urlpatterns = [
     path('api/mark-chat-read/', views.mark_chat_read, name='mark_chat_read'),
     path('api/save-location-preference/', views.save_location_preference, name='save_location_preference'),
     path('api/erase-location-preference/', views.erase_location_preference, name='erase_location_preference'),
+    path('api/get-admin-roles/', views.get_admin_roles_api, name='get_admin_roles_api'),
 ]

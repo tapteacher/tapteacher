@@ -775,56 +775,60 @@ def admin_dashboard(request):
         # Handle "Save Admin Roles"
         elif 'save_admin_roles' in request.POST:
             if is_superadmin:
-                hr_email = request.POST.get('hr_email', '').strip()
-                import json
-                roles_json = request.POST.get('assigned_roles_json', '[]')
                 try:
-                    roles = json.loads(roles_json)
-                except ValueError:
-                    roles = []
-                
-                if hr_email:
-                    is_delete = request.POST.get('delete_admin_roles', '0') == '1'
-                    from django.contrib.auth.models import User
+                    hr_email = request.POST.get('hr_email', '').strip()
+                    import json
+                    roles_json = request.POST.get('assigned_roles_json', '[]')
+                    try:
+                        roles = json.loads(roles_json)
+                    except ValueError:
+                        roles = []
                     
-                    if is_delete:
-                        try:
-                            target_user = User.objects.get(email=hr_email)
-                            from .models import AdminRole
-                            AdminRole.objects.filter(user=target_user).delete()
-                            messages.success(request, f"Roles removed for {hr_email}")
-                        except User.DoesNotExist:
-                            messages.error(request, f"User {hr_email} not found")
-                    else:
-                        # Create or get user by email safely
-                        target_user = User.objects.filter(email=hr_email).first()
-                        if not target_user:
-                            username_base = hr_email.split('@')[0]
-                            username = username_base
-                            # Resolve potential username conflicts
-                            counter = 1
-                            while User.objects.filter(username=username).exists():
-                                username = f"{username_base}{counter}"
-                                counter += 1
-                                
-                            target_user = User.objects.create(
-                                email=hr_email,
-                                username=username,
-                                is_staff=True
-                            )
-                        else:
-                            # Ensure existing user has staff flag to access dashboard
-                            if not target_user.is_staff:
-                                target_user.is_staff = True
-                                target_user.save()
+                    if hr_email:
+                        is_delete = request.POST.get('delete_admin_roles', '0') == '1'
+                        from django.contrib.auth.models import User
                         
-                        from .models import AdminRole
-                        admin_role, _ = AdminRole.objects.get_or_create(user=target_user)
-                        admin_role.roles = roles
-                        admin_role.save()
-                        messages.success(request, f"Roles updated for {hr_email}")
-                
-                return redirect('admin_dashboard')
+                        if is_delete:
+                            try:
+                                target_user = User.objects.get(email=hr_email)
+                                from .models import AdminRole
+                                AdminRole.objects.filter(user=target_user).delete()
+                                messages.success(request, f"Roles removed for {hr_email}")
+                            except User.DoesNotExist:
+                                messages.error(request, f"User {hr_email} not found")
+                        else:
+                            # Create or get user by email safely
+                            target_user = User.objects.filter(email=hr_email).first()
+                            if not target_user:
+                                username_base = hr_email.split('@')[0]
+                                username = username_base
+                                # Resolve potential username conflicts
+                                counter = 1
+                                while User.objects.filter(username=username).exists():
+                                    username = f"{username_base}{counter}"
+                                    counter += 1
+                                    
+                                target_user = User.objects.create(
+                                    email=hr_email,
+                                    username=username,
+                                    is_staff=True
+                                )
+                            else:
+                                # Ensure existing user has staff flag to access dashboard
+                                if not target_user.is_staff:
+                                    target_user.is_staff = True
+                                    target_user.save()
+                            
+                            from .models import AdminRole
+                            admin_role, _ = AdminRole.objects.get_or_create(user=target_user)
+                            admin_role.roles = roles
+                            admin_role.save()
+                            messages.success(request, f"Roles updated for {hr_email}")
+                    
+                    return redirect('admin_dashboard')
+                except Exception as e:
+                    messages.error(request, f"Technical Error: {str(e)}")
+                    return redirect('admin_dashboard')
 
     return render(request, 'core/admin_dashboard.html', {
         'settings': settings,
@@ -1151,7 +1155,23 @@ def mark_not_interested(request, post_id):
         except VacancyPost.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Vacancy not found'})
     return JsonResponse({'success': False, 'message': 'Invalid request'})
-    return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+@login_required(login_url='login_view')
+def get_admin_roles_api(request):
+    """API endpoint to fetch existing roles for an HR user by email."""
+    # Only superadmin can fetch other user's roles
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    
+    email = request.GET.get('email', '').strip()
+    if not email:
+        return JsonResponse({'success': False, 'error': 'No email provided'}, status=400)
+    
+    user = User.objects.filter(email=email).first()
+    if user and hasattr(user, 'adminrole'):
+        return JsonResponse({'success': True, 'roles': user.adminrole.roles})
+    
+    return JsonResponse({'success': True, 'roles': []})
 
 @login_required(login_url='login_view')
 def get_vacancy_details(request):
