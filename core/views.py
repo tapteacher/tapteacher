@@ -12,6 +12,7 @@ from .models import SiteSettings, UserReadVacancy
 from django.utils import timezone
 from datetime import timedelta
 import json
+from django.contrib import messages
 
 def home(request):
     category = request.GET.get('category', 'govt') # Default to government
