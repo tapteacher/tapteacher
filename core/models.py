@@ -319,6 +319,7 @@ class EmailTemplate(models.Model):
         ('pgt', 'PGT'),
         ('other', 'Other'),
     ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     subject = models.CharField(max_length=100, help_text="e.g. Physics, Mathematics")
     email_subject = models.CharField(max_length=255, help_text="Subject line for the email")
@@ -326,7 +327,7 @@ class EmailTemplate(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ['category', 'subject']
+        unique_together = ['user', 'category', 'subject']
 
     def save(self, *args, **kwargs):
         if self.category:

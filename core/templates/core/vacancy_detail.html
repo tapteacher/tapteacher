@@ -75,6 +75,7 @@
                 Apply via Email
             </a>
 
+            {% if not is_test_mode %}
             <!-- Save for Later (JS handled) -->
             <button id="save-btn" class="hover-darken"
                 style="background: #fcfcfc; border: 1px solid #eee; padding: 12px 30px; border-radius: 4px; color: #000; font-size: 14px; cursor: pointer; min-width: 140px;">
@@ -85,6 +86,7 @@
             <button id="not-interested-btn" class="hover-darken"
                 style="background: #fcfcfc; border: 1px solid #eee; padding: 12px 30px; border-radius: 4px; color: #000; font-size: 14px; cursor: pointer; min-width: 140px;">Not
                 Interested</button>
+            {% endif %}
         </div>
 
         <p style="margin-top: -20px; margin-bottom: 30px; font-size: 13px; color: #666; text-align: center;">
@@ -178,8 +180,10 @@
                 }, 1000);
             };
 
-            // Save to DB first
-            if (postId && postId !== "None" && postId !== "None") {
+            // Save to DB first (SKIP IF IN TEST MODE)
+            const isTestMode = {% if is_test_mode %}true{% else %}false{% endif %};
+            
+            if (postId && postId !== "None" && !isTestMode) {
                 fetch(`/apply/${postId}/`, {
                     method: 'POST',
                     headers: {
@@ -189,17 +193,7 @@
                 }).then(response => response.json())
                     .then(data => {
                         console.log('Application saved:', data);
-                        // Redirect logic if needed, OR just open the link
-                        // If from dashboard, we might want to stay here or reload?
-                        // But usually "Apply" just opens the mail client.
-
                         openLink();
-
-                        // Optional: Redirect back if needed, but mailto keeps you on page usually.
-                        if (data.success && isFromDashboard) {
-                            // reload to show updated status?
-                            // window.location.reload(); 
-                        }
                     })
                     .catch(err => {
                         console.error("Tracking error:", err);

@@ -138,7 +138,10 @@ def district_view(request, state_name, district_name):
     
     # Get user's acknowledged vacancy IDs
     user_read_ids = set()
-    if request.user.is_authenticated:
+    # HRs always see all vacancies for testing, skip exclusion
+    is_hr_tester = request.user.is_authenticated and not request.user.is_superuser and hasattr(request.user, 'adminrole')
+    
+    if request.user.is_authenticated and not is_hr_tester:
         user_read_ids = set(get_user_read_ids(request.user))
     
     # Define cutoff for "new" vacancies (within 10 days)
@@ -238,10 +241,13 @@ def institute_view(request, state_name, district_name, institute_name):
                     status__in=['applied', 'not_interested']
                 ).values_list('vacancy_post_id', flat=True)
 
+            # HRs always see all subjects for testing, skip exclusion
+            is_hr_tester = request.user.is_authenticated and not request.user.is_superuser and hasattr(request.user, 'adminrole')
+
             posts = latest_vacancy.posts.all()
             for p in posts:
-                # Skip if user applied or is not interested
-                if p.id in excluded_post_ids:
+                # Skip if user applied or is not interested (unless HR testing)
+                if not is_hr_tester and p.id in excluded_post_ids:
                     continue
 
                 item = {'name': p.subject}
@@ -297,7 +303,11 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
     post = post_qs.order_by('-vacancy__created_at').first()
 
     if post:
-        if request.user.is_authenticated:
+        # HR Testing Mode check
+        is_test_mode = request.user.is_authenticated and post.vacancy.uploaded_by == request.user
+        
+        # Skip tracking if in test mode
+        if request.user.is_authenticated and not is_test_mode:
             try:
                 if hasattr(request.user, 'verification'):
                     request.user.verification.viewed_vacancies.add(post)
@@ -335,7 +345,8 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
     
     # Generate Mailto Link ONLY if it's an email
     if is_email:
-        mailto_link = generate_mailto_link(request, vacancy_type, subject_name, app_link_str)
+        # Pass the post owner (HR) to ensure their template is used and docs are hidden
+        mailto_link = generate_mailto_link(request, vacancy_type, subject_name, app_link_str, owner=post.vacancy.uploaded_by)
     else:
         mailto_link = ""
         # Ensure URLs have http/https prefix if it looks like a domain
@@ -356,10 +367,11 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
         'application_link': app_link,
         'is_email': is_email,
         'post_id': post_id,
-        'mailto_link': mailto_link
+        'mailto_link': mailto_link,
+        'is_test_mode': is_test_mode
     })
 
-def generate_mailto_link(request, category, subject, application_email=None):
+def generate_mailto_link(request, category, subject, application_email=None, owner=None):
     """
     Helper to generate a mailto link with pre-filled subject and body.
     Includes links to user's uploaded documents if authenticated.
@@ -367,11 +379,22 @@ def generate_mailto_link(request, category, subject, application_email=None):
     from .models import EmailTemplate, UserVerification
     import urllib.parse
     
-    # 1. Find Template
-    template = EmailTemplate.objects.filter(
-        category=category.strip().lower(), 
-        subject=subject.strip().lower()
-    ).first()
+    # 1. Find Template - Prioritize the owner's private template if provided
+    template = None
+    if owner:
+        template = EmailTemplate.objects.filter(
+            user=owner,
+            category=category.strip().lower(), 
+            subject=subject.strip().lower()
+        ).first()
+    
+    # Fallback to general template if owner's not found or not provided
+    if not template:
+        template = EmailTemplate.objects.filter(
+            user__isnull=True,
+            category=category.strip().lower(), 
+            subject=subject.strip().lower()
+        ).first()
     
     email_subject = ""
     email_body = ""
@@ -385,7 +408,8 @@ def generate_mailto_link(request, category, subject, application_email=None):
         email_body = f"Dear Principal/Hiring Manager,\n\nI am writing to apply for the position of {subject}.\n\n"
     
     # 2. Append User Profile Links if authenticated
-    if request.user.is_authenticated:
+    # DO NOT append if the user is the owner (HR testing mode)
+    if request.user.is_authenticated and request.user != owner:
         try:
             verification = request.user.verification
             domain = request.build_absolute_uri('/')[:-1] # Get domain e.g. http://127.0.0.1:8000
@@ -539,14 +563,13 @@ def admin_dashboard(request):
     # --- Automated Cleaning: Expire vacancies older than 10 days ---
     cutoff_date = timezone.now() - timedelta(days=10)
     # Perform soft-delete (is_active=False) on old active vacancies
-    # We filter by is_active=True to avoid re-updating already inactive ones
-    expired_count = Vacancy.objects.filter(is_active=True, created_at__lt=cutoff_date).update(is_active=False)
+    Vacancy.objects.filter(is_active=True, created_at__lt=cutoff_date).update(is_active=False)
     # Optional: Log or print expired_count if debugging needed
     # -------------------------------------------------------------
 
-    # Fetch Email Templates for display
+    # Fetch Email Templates for display - Private to the HR
     from .models import EmailTemplate
-    email_templates = EmailTemplate.objects.all().order_by('category', 'subject')
+    email_templates = EmailTemplate.objects.filter(user=request.user).order_by('category', 'subject')
 
     # Fetch Submitted Vacancies - Only active ones, annotated with applicant count
     submitted_vacancies_qs = Vacancy.objects.filter(is_active=True)
@@ -726,25 +749,20 @@ def admin_dashboard(request):
                     'traceback': error_trace
                 }, status=500)
             
-        # Handle "Add/Edit Email Template"
         elif 'save_email_template' in request.POST:
             from .models import EmailTemplate
-            cat = request.POST.get('template_category', '').strip()
-            sub = request.POST.get('template_subject', '').strip()
+            cat = request.POST.get('template_category', '').strip().lower()
+            sub = request.POST.get('template_subject', '').strip().lower()
             
-            # Simple upsert based on category + subject
-            template, created = EmailTemplate.objects.get_or_create(
+            template, _ = EmailTemplate.objects.get_or_create(
+                user=request.user,
                 category=cat,
-                subject=sub,
-                defaults={
-                    'email_subject': request.POST.get('email_subject'),
-                    'email_body': request.POST.get('email_body')
-                }
+                subject=sub
             )
-            if not created:
-                template.email_subject = request.POST.get('email_subject')
-                template.email_body = request.POST.get('email_body')
-                template.save()
+            template.email_subject = request.POST.get('email_subject')
+            template.email_body = request.POST.get('email_body')
+            template.save()
+            messages.success(request, f"Template for {cat.upper()} - {sub} saved!")
             return redirect('admin_dashboard')
             
         # Handle "Delete Email Template"
@@ -806,10 +824,11 @@ def admin_dashboard(request):
 
 @login_required(login_url='login_view')
 def edit_vacancy(request, vacancy_id):
-    if not request.user.is_superuser:
-        return redirect('home')
-        
     vacancy = get_object_or_404(Vacancy, id=vacancy_id)
+    
+    # Permission check: superuser OR the one who uploaded it
+    if not request.user.is_superuser and vacancy.uploaded_by != request.user:
+        return redirect('home')
     posts = vacancy.posts.all()
     
     # We reuse the admin dashboard template logic or a specific edit template
@@ -883,10 +902,11 @@ from django.contrib import messages
 
 @login_required(login_url='login_view')
 def delete_vacancy(request, vacancy_id):
-    if not request.user.is_superuser:
-        return redirect('home')
-    
     vacancy = get_object_or_404(Vacancy, id=vacancy_id)
+    
+    # Permission check: superuser OR the one who uploaded it
+    if not request.user.is_superuser and vacancy.uploaded_by != request.user:
+        return redirect('home')
     vacancy.is_active = False
     vacancy.save()
     
