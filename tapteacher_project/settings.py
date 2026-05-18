@@ -108,7 +108,7 @@ DATABASES = {
 # Hybrid Setup:
 # If the code sees a 'DATABASE_URL' (like on Render/Heroku), it switches to that database.
 # If not (like on your laptop), it ignores this and keeps using SQLite.
-db_from_env = dj_database_url.config(conn_max_age=600)
+db_from_env = dj_database_url.config(conn_max_age=0)
 DATABASES['default'].update(db_from_env)
 
 
