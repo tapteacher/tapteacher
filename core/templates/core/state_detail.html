@@ -29,10 +29,11 @@
 
         <div class="location-grid">
             {% for district in districts %}
-            <div class="location-card {% if district in blinking_districts %}blink-red{% endif %}"
-                onclick="window.location.href='{% url 'district_view' state_name=state_name district_name=district %}?category={{ current_category }}';">
+            <a class="location-card {% if district in blinking_districts %}blink-red{% endif %}"
+                href="{% url 'district_view' state_name=state_name district_name=district %}?category={{ current_category }}"
+                style="text-decoration: none; color: inherit; display: block;">
                 {{ district }}
-            </div>
+            </a>
             {% endfor %}
         </div>
     </div>

@@ -316,8 +316,9 @@
                     {% if applied_vacancies %}
                     <div class="vacancy-list">
                         {% for app in applied_vacancies %}
-                        <div class="vacancy-item"
-                            onclick="window.location.href='{% url 'vacancy_detail_view' app.vacancy_post.vacancy.institute.state app.vacancy_post.vacancy.institute.district app.vacancy_post.vacancy.institute.name app.vacancy_post.subject %}?category={{ app.vacancy_post.vacancy.institute.category }}&type={{ app.vacancy_post.category }}&from=dashboard'">
+                        <a class="vacancy-item"
+                            href="{% url 'vacancy_detail_view' app.vacancy_post.vacancy.institute.state app.vacancy_post.vacancy.institute.district app.vacancy_post.vacancy.institute.name app.vacancy_post.subject %}?category={{ app.vacancy_post.vacancy.institute.category }}&type={{ app.vacancy_post.category }}&from=dashboard"
+                            style="text-decoration: none; display: block; color: inherit;">
                             <div class="vacancy-header">
                                 <h3>{{ app.vacancy_post.vacancy.institute.name }}</h3>
                                 <span class="vacancy-date">{{ app.applied_at|date:"M d, Y" }}</span>
@@ -329,7 +330,7 @@
                                 <span class="vacancy-location">{{ inst.district }}, {{ inst.state }}</span>
                                 {% endwith %}
                             </div>
-                        </div>
+                        </a>
                         {% endfor %}
                     </div>
                     {% else %}
@@ -343,8 +344,9 @@
                     {% if saved_vacancies %}
                     <div class="vacancy-list">
                         {% for app in saved_vacancies %}
-                        <div class="vacancy-item"
-                            onclick="window.location.href='{% url 'vacancy_detail_view' app.vacancy_post.vacancy.institute.state app.vacancy_post.vacancy.institute.district app.vacancy_post.vacancy.institute.name app.vacancy_post.subject %}?category={{ app.vacancy_post.vacancy.institute.category }}&type={{ app.vacancy_post.category }}&from=dashboard'">
+                        <a class="vacancy-item"
+                            href="{% url 'vacancy_detail_view' app.vacancy_post.vacancy.institute.state app.vacancy_post.vacancy.institute.district app.vacancy_post.vacancy.institute.name app.vacancy_post.subject %}?category={{ app.vacancy_post.vacancy.institute.category }}&type={{ app.vacancy_post.category }}&from=dashboard"
+                            style="text-decoration: none; display: block; color: inherit;">
                             <div class="vacancy-header">
                                 <h3>{{ app.vacancy_post.vacancy.institute.name }}</h3>
                                 <span class="vacancy-date">{{ app.applied_at|date:"M d, Y" }}</span>
@@ -356,7 +358,7 @@
                                 <span class="vacancy-location">{{ inst.district }}, {{ inst.state }}</span>
                                 {% endwith %}
                             </div>
-                        </div>
+                        </a>
                         {% endfor %}
                     </div>
                     {% else %}
