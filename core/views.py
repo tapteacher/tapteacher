@@ -320,6 +320,7 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
         age_limit = post.age_limit
         app_link = post.vacancy.application_link or ""
         post_id = post.id
+        total_posts = post.total_posts
     else:
         # Fallback for deleted vacancy when user clicks from email
         return render(request, 'core/vacancy_closed.html')
@@ -328,6 +329,7 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
         age_limit = "NA"
         app_link = ""
         post_id = None
+        total_posts = ""
 
     # Category display name
     category_titles = {
@@ -368,7 +370,8 @@ def vacancy_detail_view(request, state_name, district_name, institute_name, subj
         'is_email': is_email,
         'post_id': post_id,
         'mailto_link': mailto_link,
-        'is_test_mode': is_test_mode
+        'is_test_mode': is_test_mode,
+        'total_posts': total_posts
     })
 
 def generate_mailto_link(request, category, subject, application_email=None, owner=None):
@@ -636,6 +639,7 @@ def admin_dashboard(request):
             compensations = request.POST.getlist('post_compensation[]')
             eligibilities = request.POST.getlist('post_eligibility[]')
             age_limits = request.POST.getlist('post_age_limit[]')
+            total_posts_list = request.POST.getlist('post_total_posts[]')
 
             for i in range(len(categories)):
                 VacancyPost.objects.create(
@@ -645,7 +649,8 @@ def admin_dashboard(request):
                     qualification=qualifications[i] if i < len(qualifications) else "NA",
                     compensation=compensations[i] if i < len(compensations) else "NA",
                     eligibility=eligibilities[i] if i < len(eligibilities) else "NA",
-                    age_limit=age_limits[i] if i < len(age_limits) else "NA"
+                    age_limit=age_limits[i] if i < len(age_limits) else "NA",
+                    total_posts=total_posts_list[i] if i < len(total_posts_list) else ""
                 )
             
             # In a real app we'd redirect with a success message
@@ -896,6 +901,7 @@ def edit_vacancy(request, vacancy_id):
         compensations = request.POST.getlist('post_compensation[]')
         eligibilities = request.POST.getlist('post_eligibility[]')
         age_limits = request.POST.getlist('post_age_limit[]')
+        total_posts_list = request.POST.getlist('post_total_posts[]')
 
         for i in range(len(categories)):
             VacancyPost.objects.create(
@@ -905,7 +911,8 @@ def edit_vacancy(request, vacancy_id):
                 qualification=qualifications[i] if i < len(qualifications) else "NA",
                 compensation=compensations[i] if i < len(compensations) else "NA",
                 eligibility=eligibilities[i] if i < len(eligibilities) else "NA",
-                age_limit=age_limits[i] if i < len(age_limits) else "NA"
+                age_limit=age_limits[i] if i < len(age_limits) else "NA",
+                total_posts=total_posts_list[i] if i < len(total_posts_list) else ""
             )
             
         return redirect('admin_dashboard')

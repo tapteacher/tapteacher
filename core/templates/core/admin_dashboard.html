@@ -381,13 +381,13 @@
                     <!-- Vacancy Type -->
                     <div class="form-group" style="margin-bottom: 20px;">
                         <label>Select a Vacancy Type *</label>
-                        <select name="guidance_category" required>
-                            <option value="" hidden>Select Type</option>
+                        <input list="syllabus-vacancy-types" name="guidance_category" placeholder="Select or type category (e.g. PRT)" required>
+                        <datalist id="syllabus-vacancy-types">
                             <option value="prt">PRT Vacancy</option>
                             <option value="tgt">TGT Vacancy</option>
                             <option value="pgt">PGT Vacancy</option>
                             <option value="other">Other Vacancy</option>
-                        </select>
+                        </datalist>
                     </div>
 
                     <!-- Subject -->
@@ -498,6 +498,13 @@
                         <button type="button" class="btn-add-post" onclick="addPostBox()">+ Add Post</button>
                     </div>
 
+                    <datalist id="vacancy-post-types">
+                        <option value="prt">PRT</option>
+                        <option value="tgt">TGT</option>
+                        <option value="pgt">PGT</option>
+                        <option value="other">Other</option>
+                    </datalist>
+
                     <div id="posts-container">
                         <!-- Post boxes will be added here -->
                     </div>
@@ -605,22 +612,26 @@
                 <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Create and manage email templates for
                     different vacancy categories. These will be used when applicants click "Apply".</p>
 
-                <!-- Category Tabs -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button type="button" class="btn-template-cat active" onclick="showTemplateForm('prt', this)"
-                        style="padding: 8px 16px; border: 1px solid #ddd; background: #eee; cursor: pointer; border-radius: 4px;">PRT</button>
-                    <button type="button" class="btn-template-cat" onclick="showTemplateForm('tgt', this)"
-                        style="padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px;">TGT</button>
-                    <button type="button" class="btn-template-cat" onclick="showTemplateForm('pgt', this)"
-                        style="padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px;">PGT</button>
-                    <button type="button" class="btn-template-cat" onclick="showTemplateForm('other', this)"
-                        style="padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px;">Other</button>
-                </div>
-
                 <form method="POST" id="email-template-form">
                     {% csrf_token %}
                     <input type="hidden" name="save_email_template" value="1">
-                    <input type="hidden" name="template_category" id="template_category" value="prt">
+
+                    <!-- Category Input (free text with suggestions) -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Post Category *
+                            <span style="font-size: 12px; color: #888; font-weight: 400;">(must match vacancy post category exactly)</span>
+                        </label>
+                        <input list="template-cat-list" name="template_category" id="template_category_input"
+                            placeholder="e.g. prt, tgt, ib board teacher..." required
+                            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                        <datalist id="template-cat-list">
+                            <option value="prt">PRT</option>
+                            <option value="tgt">TGT</option>
+                            <option value="pgt">PGT</option>
+                            <option value="other">Other</option>
+                        </datalist>
+                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Type the exact same category you used when uploading the vacancy (e.g. <em>prt</em>, <em>ib board teacher</em>).</p>
+                    </div>
 
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 5px; font-weight: 500;">Subject (e.g. Physics)
@@ -655,16 +666,16 @@
 
                 <!-- Existing Templates List -->
                 <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                    <h4 style="margin: 0 0 15px 0; font-size: 15px;">Existing Templates for <span
-                            id="current-template-cat-display">PRT</span></h4>
+                    <h4 style="margin: 0 0 15px 0; font-size: 15px;">All Saved Templates</h4>
                     <div id="templates-list-container">
                         {% for t in email_templates %}
                         <div class="template-item" data-category="{{ t.category }}"
-                            style="display: {% if t.category == 'prt' %}block{% else %}none{% endif %}; background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #eee;">
+                            style="display: block; background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #eee;">
                             <div
                                 style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                                 <div>
-                                    <strong style="font-size: 15px; color: #111;">{{ t.subject }}</strong>
+                                    <span style="display: inline-block; background: #111; color: white; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; margin-bottom: 4px; text-transform: uppercase;">{{ t.category }}</span>
+                                    <strong style="font-size: 15px; color: #111; display: block;">{{ t.subject }}</strong>
                                     <div style="font-size: 13px; color: #555; margin-top: 2px;">Subject: {{
                                         t.email_subject }}</div>
                                 </div>
@@ -688,9 +699,12 @@
                                 style="font-size: 13px; color: #666; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #e0e0e0; margin-top: 5px; white-space: pre-wrap; max-height: 100px; overflow-y: auto;">
                                 {{ t.email_body }}</div>
                         </div>
+                        {% empty %}
+                        <div style="text-align: center; padding: 20px; color: #999; font-size: 14px;">No templates saved yet.</div>
                         {% endfor %}
                     </div>
                 </div>
+
             </div>
         </div>
         {% endif %}
@@ -897,20 +911,17 @@
         }
 
         function loadTemplate(cat, sub, emailSub, emailBody) {
-            // Find button for category and click it (to switch view)
-            const btns = document.querySelectorAll('.btn-template-cat');
-            let targetBtn = null;
-            if (cat === 'prt') targetBtn = btns[0];
-            else if (cat === 'tgt') targetBtn = btns[1];
-            else if (cat === 'pgt') targetBtn = btns[2];
-            else targetBtn = btns[3];
-
-            showTemplateForm(cat, targetBtn);
+            // Fill Category input
+            const catInput = document.getElementById('template_category_input');
+            if (catInput) catInput.value = cat;
 
             // Fill Form
             document.getElementById('template_subject').value = sub;
             document.getElementById('email_subject_input').value = emailSub;
             document.getElementById('email_body_input').value = emailBody;
+
+            // Scroll to form
+            document.getElementById('email-template-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function addPostBox() {
@@ -929,17 +940,15 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Post Category *</label>
-                        <select name="post_category[]" required>
-                            <option value="" hidden>Select Post</option>
-                            <option value="prt">PRT</option>
-                            <option value="tgt">TGT</option>
-                            <option value="pgt">PGT</option>
-                            <option value="other">Other</option>
-                        </select>
+                        <input list="vacancy-post-types" name="post_category[]" placeholder="Select or type post" required style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box;">
                     </div>
                     <div class="form-group">
                         <label>Subject *</label>
                         <input type="text" name="post_subject[]" placeholder="Enter Subject" required>
+                    </div>
+                    <div class="form-group" style="flex: 0.5;">
+                        <label>Number of Post</label>
+                        <input type="text" name="post_total_posts[]" placeholder="e.g. 2 or Multiple">
                     </div>
                 </div>
                 <div style="font-size:15px; font-weight:600; margin: 20px 0 15px 0;">Requirements & Compensation</div>
@@ -1107,6 +1116,7 @@
                         compensation: prevBox.querySelector('textarea[name="post_compensation[]"]').value,
                         eligibility: prevBox.querySelector('textarea[name="post_eligibility[]"]').value,
                         age_limit: prevBox.querySelector('textarea[name="post_age_limit[]"]').value,
+                        total_posts: prevBox.querySelector('input[name="post_total_posts[]"]').value,
                     };
                 }
                 collapsePost(postCount);
@@ -1123,6 +1133,7 @@
                     newBox.querySelector('textarea[name="post_compensation[]"]').value = previousData.compensation;
                     newBox.querySelector('textarea[name="post_eligibility[]"]').value = previousData.eligibility;
                     newBox.querySelector('textarea[name="post_age_limit[]"]').value = previousData.age_limit;
+                    newBox.querySelector('input[name="post_total_posts[]"]').value = previousData.total_posts;
                 }
                 return; // Logic complete if we copied from client-side
             }

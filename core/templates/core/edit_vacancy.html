@@ -177,6 +177,13 @@
                 <button type="button" class="btn-add-post" onclick="addPostBox()">+ Add Post</button>
             </div>
 
+            <datalist id="edit-post-types">
+                <option value="prt">PRT</option>
+                <option value="tgt">TGT</option>
+                <option value="pgt">PGT</option>
+                <option value="other">Other</option>
+            </datalist>
+
             <div id="posts-container">
                 {% for post in posts %}
                 <div class="post-detail-box" id="post-box-{{ forloop.counter }}">
@@ -189,16 +196,15 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Post Category *</label>
-                            <select name="post_category[]" required>
-                                <option value="prt" {% if post.category == 'prt' %}selected{% endif %}>PRT</option>
-                                <option value="tgt" {% if post.category == 'tgt' %}selected{% endif %}>TGT</option>
-                                <option value="pgt" {% if post.category == 'pgt' %}selected{% endif %}>PGT</option>
-                                <option value="other" {% if post.category == 'other' %}selected{% endif %}>Other</option>
-                            </select>
+                            <input list="edit-post-types" name="post_category[]" value="{{ post.category }}" placeholder="Select or type category" required>
                         </div>
                         <div class="form-group">
                             <label>Subject *</label>
                             <input type="text" name="post_subject[]" value="{{ post.subject }}" required>
+                        </div>
+                        <div class="form-group" style="flex: 0.5;">
+                            <label>Number of Post</label>
+                            <input type="text" name="post_total_posts[]" value="{{ post.total_posts }}" placeholder="e.g. 2 or Multiple">
                         </div>
                     </div>
                     <div style="font-size:15px; font-weight:600; margin: 20px 0 15px 0;">Requirements & Compensation
@@ -273,17 +279,15 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Post Category *</label>
-                        <select name="post_category[]" required>
-                            <option value="" hidden>Select Post</option>
-                            <option value="prt">PRT</option>
-                            <option value="tgt">TGT</option>
-                            <option value="pgt">PGT</option>
-                            <option value="other">Other</option>
-                        </select>
+                        <input list="edit-post-types" name="post_category[]" placeholder="Select or type category" required style="padding:12px; border:1px solid #e0e0e0; border-radius:8px; font-size:14px; width:100%; box-sizing:border-box;">
                     </div>
                     <div class="form-group">
                         <label>Subject *</label>
                         <input type="text" name="post_subject[]" placeholder="Enter Subject" required>
+                    </div>
+                    <div class="form-group" style="flex: 0.5;">
+                        <label>Number of Post</label>
+                        <input type="text" name="post_total_posts[]" placeholder="e.g. 2 or Multiple">
                     </div>
                 </div>
                 <div style="font-size:15px; font-weight:600; margin: 20px 0 15px 0;">Requirements & Compensation</div>

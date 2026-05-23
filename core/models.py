@@ -77,14 +77,9 @@ class Vacancy(models.Model):
         return f"Vacancy for {self.institute.name}"
 
 class VacancyPost(models.Model):
-    POST_CATEGORY_CHOICES = [
-        ('prt', 'PRT'),
-        ('tgt', 'TGT'),
-        ('pgt', 'PGT'),
-        ('other', 'Other'),
-    ]
     vacancy = models.ForeignKey(Vacancy, on_delete=models.CASCADE, related_name='posts')
-    category = models.CharField(max_length=20, choices=POST_CATEGORY_CHOICES)
+    category = models.CharField(max_length=100)
+    total_posts = models.CharField(max_length=50, blank=True, null=True, default="", help_text="Number of vacancies")
     
     # Alert Tracking
     alert_emails_sent = models.BooleanField(default=False, help_text="Checked if daily alert script has already processed this post.")
@@ -313,14 +308,8 @@ def save_user_verification(sender, instance, **kwargs):
         UserVerification.objects.create(user=instance)
 
 class EmailTemplate(models.Model):
-    CATEGORY_CHOICES = [
-        ('prt', 'PRT'),
-        ('tgt', 'TGT'),
-        ('pgt', 'PGT'),
-        ('other', 'Other'),
-    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    category = models.CharField(max_length=100)
     subject = models.CharField(max_length=100, help_text="e.g. Physics, Mathematics")
     email_subject = models.CharField(max_length=255, help_text="Subject line for the email")
     email_body = models.TextField(help_text="Body content for the email")
