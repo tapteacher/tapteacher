@@ -660,14 +660,27 @@ def admin_dashboard(request):
         elif 'upload_syllabus' in request.POST:
             try:
                 from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, GuidanceTopicFile, User
+                from django.utils.text import slugify
                 
                 target_audience = request.POST.get('target_audience')
-                category_slug = request.POST.get('guidance_category')
+                category_input = request.POST.get('guidance_category', '').strip()
                 subject_name = request.POST.get('subject_name')
                 
                 # Find or Create Category
-                if category_slug:
-                    category, _ = GuidanceCategory.objects.get_or_create(slug=category_slug, defaults={'name': category_slug.upper()})
+                if category_input:
+                    category_slug = slugify(category_input)
+                    if not category_slug:
+                        category_slug = "other"
+                    
+                    # Ensure name display is neat (e.g. "PRT", "Librarian")
+                    category_name = category_input
+                    if category_slug in ['prt', 'tgt', 'pgt', 'other']:
+                        category_name = category_input.upper()
+                    
+                    category, _ = GuidanceCategory.objects.get_or_create(
+                        slug=category_slug,
+                        defaults={'name': category_name}
+                    )
                     
                     # Find or Create Subject
                     subject, _ = GuidanceSubject.objects.get_or_create(
@@ -742,6 +755,82 @@ def admin_dashboard(request):
                             for f in request.FILES.getlist(f'topic_image_{i}[]'):
                                 f.name = sanitize_filename(f.name)
                                 GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='image')
+
+                        # ===== Save MCQ Section =====
+                        mcq_mode = request.POST.get(f'topic_mcq_mode_{i}', 'none')
+                        if mcq_mode in ['ai', 'manual']:
+                            try:
+                                timer_mins = int(request.POST.get(f'topic_mcq_timer_{i}', 10))
+                            except ValueError:
+                                timer_mins = 10
+
+                            raw_json = ''
+                            if mcq_mode == 'ai':
+                                raw_json = request.POST.get(f'topic_mcq_json_{i}', '').strip()
+                            elif mcq_mode == 'manual':
+                                raw_json = request.POST.get(f'topic_mcq_manual_json_{i}', '').strip()
+
+                            if raw_json:
+                                try:
+                                    questions_data = json.loads(raw_json)
+                                    if isinstance(questions_data, list) and len(questions_data) > 0:
+                                        from .models import MCQSet, MCQ, MCQOption
+                                        mcq_set = MCQSet.objects.create(
+                                            topic=topic,
+                                            time_limit_minutes=timer_mins
+                                        )
+                                        for q_idx, q_item in enumerate(questions_data):
+                                            # --- Flexible key resolution ---
+                                            q_text = (
+                                                q_item.get('question') or
+                                                q_item.get('question_text') or
+                                                q_item.get('text') or ''
+                                            ).strip()
+                                            if not q_text:
+                                                continue
+                                            options_list = (
+                                                q_item.get('options') or
+                                                q_item.get('choices') or
+                                                q_item.get('answers') or []
+                                            )
+                                            correct_raw = (
+                                                q_item.get('correct') if q_item.get('correct') is not None
+                                                else q_item.get('correct_index', q_item.get('correct_option', q_item.get('answer', 0)))
+                                            )
+                                            correct_idx = 0
+                                            if isinstance(correct_raw, int):
+                                                correct_idx = correct_raw
+                                            elif isinstance(correct_raw, str):
+                                                val = correct_raw.strip()
+                                                if len(val) == 1 and val.upper() in 'ABCDEFGHIJ':
+                                                    correct_idx = ord(val.upper()) - 65
+                                                else:
+                                                    try:
+                                                        correct_idx = int(val)
+                                                    except ValueError:
+                                                        # match text to option
+                                                        for oi, ot in enumerate(options_list):
+                                                            if str(ot).strip().lower() == val.lower():
+                                                                correct_idx = oi
+                                                                break
+
+                                            mcq_question = MCQ.objects.create(
+                                                mcq_set=mcq_set,
+                                                question_text=q_text,
+                                                order=q_idx + 1
+                                            )
+                                            for opt_idx, opt_text in enumerate(options_list[:10]):
+                                                label = chr(65 + opt_idx)
+                                                MCQOption.objects.create(
+                                                    mcq=mcq_question,
+                                                    label=label,
+                                                    option_text=str(opt_text).strip(),
+                                                    is_correct=(opt_idx == correct_idx)
+                                                )
+                                except Exception as json_err:
+                                    import traceback
+                                    print(f"Error parsing MCQ JSON for topic {i}:", json_err)
+                                    print(traceback.format_exc())
                 
                 return redirect('admin_dashboard')
             except Exception as e:
@@ -782,7 +871,6 @@ def admin_dashboard(request):
             if is_superadmin:
                 try:
                     hr_email = request.POST.get('hr_email', '').strip()
-                    import json
                     roles_json = request.POST.get('assigned_roles_json', '[]')
                     try:
                         roles = json.loads(roles_json)
@@ -1231,7 +1319,11 @@ def search_users(request):
 @login_required(login_url='login_view')
 def syllabus_landing(request):
     # Ensure default categories exist to prevent 404s on hardcoded links
-    from .models import GuidanceCategory
+    from .models import GuidanceCategory, GuidanceTopic
+    from django.db.models import Q
+    from django.utils import timezone
+    from datetime import timedelta
+
     defaults = ['prt', 'tgt', 'pgt', 'other']
     for slug in defaults:
         GuidanceCategory.objects.get_or_create(slug=slug, defaults={'name': slug.upper() + ' Vacancy'})
@@ -1251,16 +1343,10 @@ def syllabus_landing(request):
             last_visit = parse_datetime(visit_cookie)
             
     # If no last visit, default to 7 days ago safe cutoff
-    from django.utils import timezone
-    from datetime import timedelta
     if not last_visit:
         last_visit = timezone.now() - timedelta(days=7)
 
-    # Check for new topics per category
-    from .models import GuidanceTopic
-    from django.db.models import Q
-    
-    # helper
+    # helper to check if a category should blink (contains new content)
     def check_cat_blink(cat_slug):
         q = GuidanceTopic.objects.filter(
             subject__category__slug=cat_slug,
@@ -1270,20 +1356,17 @@ def syllabus_landing(request):
              return q.filter(Q(is_for_everyone=True) | Q(assigned_users=request.user)).exists()
         return q.filter(is_for_everyone=True).exists()
 
-    blink_flags = {
-        'blink_prt': check_cat_blink('prt'),
-        'blink_tgt': check_cat_blink('tgt'),
-        'blink_pgt': check_cat_blink('pgt'),
-        'blink_other': check_cat_blink('other'),
-    }
+    # Retrieve all categories dynamically and attach the blink flag
+    categories_list = list(GuidanceCategory.objects.all())
+    for cat in categories_list:
+        cat.should_blink = check_cat_blink(cat.slug)
 
     view_as_user = request.GET.get('view_as') if request.user.is_superuser else None
     
-    # Merge blink flags into context
-    context = {'view_as_user': view_as_user}
-    context.update(blink_flags)
-    
-    return render(request, 'core/syllabus_landing.html', context)
+    return render(request, 'core/syllabus_landing.html', {
+        'categories': categories_list,
+        'view_as_user': view_as_user
+    })
 
 @login_required(login_url='login_view')
 def syllabus_category_view(request, category_slug):
@@ -1385,7 +1468,7 @@ def syllabus_subject_view(request, category_slug, subject_id):
 
 @login_required(login_url='login_view')
 def syllabus_topic_detail_view(request, category_slug, subject_id, topic_id):
-    from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic
+    from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, MCQSet, MCQAttempt, UserTopicNotes
     from django.shortcuts import get_object_or_404
     
     category = get_object_or_404(GuidanceCategory, slug=category_slug)
@@ -1402,7 +1485,6 @@ def syllabus_topic_detail_view(request, category_slug, subject_id, topic_id):
         has_access = True
         
     if not has_access:
-        # Simplistic access denied handling
         return render(request, 'core/syllabus_topics.html', {
             'category': category, 
             'subject': subject,
@@ -1410,10 +1492,42 @@ def syllabus_topic_detail_view(request, category_slug, subject_id, topic_id):
             'error_message': 'You do not have permission to view this topic.'
         })
 
+    # MCQ Set
+    mcq_set = getattr(topic, 'mcq_set', None)
+    
+    # User's latest attempt
+    latest_attempt = None
+    if mcq_set:
+        latest_attempt = MCQAttempt.objects.filter(
+            user=request.user, 
+            mcq_set=mcq_set
+        ).order_by('-attempted_at').first()
+
+    # User's personal notes
+    user_notes = UserTopicNotes.objects.filter(
+        user=request.user, 
+        topic=topic
+    ).first()
+
+    # Admin Analytics (All attempts distinct by user)
+    all_attempts = []
+    if request.user.is_superuser and mcq_set:
+        raw_attempts = MCQAttempt.objects.filter(mcq_set=mcq_set).select_related('user').order_by('user', '-attempted_at')
+        seen_users = set()
+        for att in raw_attempts:
+            if att.user.id not in seen_users:
+                all_attempts.append(att)
+                seen_users.add(att.user.id)
+        all_attempts.sort(key=lambda x: x.attempted_at, reverse=True)
+
     return render(request, 'core/syllabus_topic_detail.html', {
         'category': category,
         'subject': subject,
         'topic': topic,
+        'mcq_set': mcq_set,
+        'latest_attempt': latest_attempt,
+        'user_notes': user_notes,
+        'all_attempts': all_attempts,
         'view_as_user': request.GET.get('view_as') if request.user.is_superuser else None
     })
 
@@ -1609,33 +1723,182 @@ def admin_user_list(request):
 def delete_topic(request, topic_id):
     if not request.user.is_superuser:
         return redirect('home')
-    
+
     from .models import GuidanceTopic
     from django.contrib import messages
-    
+
     topic = get_object_or_404(GuidanceTopic, id=topic_id)
-    
+
     # Store parent info for redirect
-    subject_id = topic.subject.id
+    subject_id    = topic.subject.id
     category_slug = topic.subject.category.slug
-    
+
     if request.method == 'POST':
-        topic_title = topic.title
         topic.delete()
         messages.success(request, 'Topic deleted successfully.')
-        
-        # Construct redirect URL with view_as param if present
         from django.urls import reverse
         url = reverse('syllabus_subject', kwargs={'category_slug': category_slug, 'subject_id': subject_id})
-        
         view_as = request.GET.get('view_as')
         if view_as:
             url += f'?view_as={view_as}'
-            
         return redirect(url)
-    
-    # Fallback
-    return redirect('syllabus_subject', category_slug=category_slug, subject_id=subject_id)
+
+    # GET: show a proper confirmation page
+    return render(request, 'core/confirm_delete_topic.html', {
+        'topic': topic,
+        'category': topic.subject.category,
+        'subject': topic.subject,
+        'view_as_user': request.GET.get('view_as'),
+    })
+
+
+@login_required(login_url='login_view')
+def delete_category(request, category_id):
+    """Superadmin: permanently delete a GuidanceCategory and all its subjects/topics/MCQs."""
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    from .models import GuidanceCategory
+
+    category = get_object_or_404(GuidanceCategory, id=category_id)
+
+    if request.method == 'POST':
+        cat_name = category.name
+        category.delete()  # cascades to subjects → topics → files / MCQSets / attempts / notes
+        messages.success(request, f"Category \'{cat_name}\' and all its content has been deleted.")
+        return redirect('syllabus_landing')
+
+    # GET: show confirmation page
+    return render(request, 'core/confirm_delete_category.html', {
+        'category': category,
+    })
+
+
+@login_required(login_url='login_view')
+def add_mcq_to_topic(request, topic_id):
+    """Superadmin: attach an MCQ set to an already-uploaded topic."""
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    from .models import GuidanceTopic, MCQSet, MCQ, MCQOption
+
+    topic = get_object_or_404(GuidanceTopic, id=topic_id)
+    category_slug = topic.subject.category.slug
+    subject_id    = topic.subject.id
+
+    if request.method == 'POST':
+        try:
+            timer_mins = int(request.POST.get('mcq_timer', 10))
+        except (ValueError, TypeError):
+            timer_mins = 10
+
+        raw_json = request.POST.get('mcq_json', '').strip()
+        if not raw_json:
+            messages.error(request, 'No MCQ data provided.')
+            return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
+
+        try:
+            questions_data = json.loads(raw_json)
+        except Exception:
+            messages.error(request, 'Invalid JSON – please check the format.')
+            return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
+
+        if not isinstance(questions_data, list) or len(questions_data) == 0:
+            messages.error(request, 'JSON must be a non-empty array of question objects.')
+            return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
+
+        # Delete existing MCQ set if present
+        try:
+            topic.mcq_set.delete()
+        except Exception:
+            pass
+
+        mcq_set = MCQSet.objects.create(topic=topic, time_limit_minutes=timer_mins)
+
+        saved_count = 0
+        for q_idx, q_item in enumerate(questions_data):
+            q_text = (
+                q_item.get('question') or
+                q_item.get('question_text') or
+                q_item.get('text') or ''
+            ).strip()
+            if not q_text:
+                continue
+
+            options_list = (
+                q_item.get('options') or
+                q_item.get('choices') or
+                q_item.get('answers') or []
+            )
+
+            correct_raw = (
+                q_item.get('correct') if q_item.get('correct') is not None
+                else q_item.get('correct_index', q_item.get('correct_option', q_item.get('answer', 0)))
+            )
+            correct_idx = 0
+            if isinstance(correct_raw, int):
+                correct_idx = correct_raw
+            elif isinstance(correct_raw, str):
+                val = correct_raw.strip()
+                if len(val) == 1 and val.upper() in 'ABCDEFGHIJ':
+                    correct_idx = ord(val.upper()) - 65
+                else:
+                    try:
+                        correct_idx = int(val)
+                    except ValueError:
+                        for oi, ot in enumerate(options_list):
+                            if str(ot).strip().lower() == val.lower():
+                                correct_idx = oi
+                                break
+
+            mcq_q = MCQ.objects.create(mcq_set=mcq_set, question_text=q_text, order=q_idx + 1)
+            for opt_idx, opt_text in enumerate(options_list[:10]):
+                MCQOption.objects.create(
+                    mcq=mcq_q,
+                    label=chr(65 + opt_idx),
+                    option_text=str(opt_text).strip(),
+                    is_correct=(opt_idx == correct_idx)
+                )
+            saved_count += 1
+
+        messages.success(request, f'{saved_count} MCQ question(s) saved for "{topic.title}".')
+        return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
+
+    return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
+
+
+@login_required(login_url='login_view')
+def delete_mcq_from_topic(request, topic_id):
+    """Superadmin: permanently delete the MCQSet from a GuidanceTopic."""
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    from .models import GuidanceTopic, MCQSet
+    from django.contrib import messages
+
+    topic = get_object_or_404(GuidanceTopic, id=topic_id)
+    category_slug = topic.subject.category.slug
+    subject_id    = topic.subject.id
+
+    try:
+        mcq_set = topic.mcq_set
+    except MCQSet.DoesNotExist:
+        messages.error(request, 'No MCQ set found for this topic.')
+        return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
+
+    if request.method == 'POST':
+        mcq_set.delete()
+        messages.success(request, f'MCQ Set for "{topic.title}" has been deleted successfully.')
+        return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
+
+    # GET: render confirmation page
+    return render(request, 'core/confirm_delete_mcq.html', {
+        'topic': topic,
+        'mcq_set': mcq_set,
+        'category': topic.subject.category,
+        'subject': topic.subject,
+    })
+
 
 def get_user_read_ids(user):
     """Helper to get list of vacancy IDs a user has marked as read."""
@@ -1844,3 +2107,146 @@ def mark_chat_read(request):
         ChatMessage.objects.filter(user=request.user, sender_is_admin=True, is_read=False).update(is_read=True)
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+# ─────────────────────────────────────────
+#  MCQ and User Notes Backend Views
+# ─────────────────────────────────────────
+
+@login_required(login_url='login_view')
+def syllabus_topic_mcq_view(request, category_slug, subject_id, topic_id):
+    """Renders the quiz interface for an MCQ set with a countdown timer."""
+    from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, MCQSet
+    from django.shortcuts import get_object_or_404, render
+
+    category = get_object_or_404(GuidanceCategory, slug=category_slug)
+    subject = get_object_or_404(GuidanceSubject, id=subject_id, category=category)
+    topic = get_object_or_404(GuidanceTopic, id=topic_id, subject=subject)
+    mcq_set = get_object_or_404(MCQSet, topic=topic)
+
+    # Convert questions and options to list for template
+    questions = mcq_set.questions.all().prefetch_related('options')
+
+    return render(request, 'core/syllabus_topic_mcq.html', {
+        'category': category,
+        'subject': subject,
+        'topic': topic,
+        'mcq_set': mcq_set,
+        'questions': questions,
+    })
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def syllabus_topic_mcq_submit_view(request, topic_id):
+    """Calculates and saves an MCQ attempt from JSON payload."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST method required'}, status=405)
+
+    from .models import GuidanceTopic, MCQSet, MCQAttempt, MCQAttemptAnswer, MCQOption, MCQ
+    from django.shortcuts import get_object_or_404
+    import json
+
+    topic = get_object_or_404(GuidanceTopic, id=topic_id)
+    mcq_set = get_object_or_404(MCQSet, topic=topic)
+
+    try:
+        data = json.loads(request.body)
+        user_answers = data.get('answers', {})  # Map of QuestionID string -> OptionID (int or null)
+        time_taken = int(data.get('time_taken_seconds', 0))
+    except (ValueError, TypeError):
+        return JsonResponse({'success': False, 'message': 'Invalid payload format'}, status=400)
+
+    questions = mcq_set.questions.all().prefetch_related('options')
+    
+    correct_cnt = 0
+    wrong_cnt = 0
+    skipped_cnt = 0
+    total_cnt = len(questions)
+
+    # Create the attempt object first
+    attempt = MCQAttempt.objects.create(
+        user=request.user,
+        mcq_set=mcq_set,
+        total_questions=total_cnt,
+        time_taken_seconds=time_taken
+    )
+
+    # Process each question
+    for question in questions:
+        # Check user selection
+        selected_opt_id = user_answers.get(str(question.id))
+        selected_opt = None
+        is_correct = False
+
+        if selected_opt_id is not None:
+            try:
+                selected_opt = MCQOption.objects.get(id=int(selected_opt_id), mcq=question)
+                if selected_opt.is_correct:
+                    correct_cnt += 1
+                    is_correct = True
+                else:
+                    wrong_cnt += 1
+            except (MCQOption.DoesNotExist, ValueError):
+                skipped_cnt += 1
+        else:
+            skipped_cnt += 1
+
+        # Create attempt detail answer
+        MCQAttemptAnswer.objects.create(
+            attempt=attempt,
+            mcq=question,
+            selected_option=selected_opt,
+            is_correct=is_correct
+        )
+
+    # Update attempt aggregate counts
+    attempt.correct_count = correct_cnt
+    attempt.wrong_count = wrong_cnt
+    attempt.skipped_count = skipped_cnt
+    attempt.save()
+
+    return JsonResponse({
+        'success': True,
+        'correct': correct_cnt,
+        'wrong': wrong_cnt,
+        'skipped': skipped_cnt,
+        'total': total_cnt,
+        'attempt_id': attempt.id
+    })
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def syllabus_topic_notes_save_view(request, topic_id):
+    """Saves user personal notes for a GuidanceTopic. Enforces 5MB limit."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST method required'}, status=405)
+
+    from .models import GuidanceTopic, UserTopicNotes
+    from django.shortcuts import get_object_or_404
+    import json
+
+    topic = get_object_or_404(GuidanceTopic, id=topic_id)
+    
+    try:
+        data = json.loads(request.body)
+        notes_text = data.get('notes', '')
+    except ValueError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+
+    # Limit to 5 MB
+    MAX_BYTES = 5 * 1024 * 1024
+    if len(notes_text.encode('utf-8')) > MAX_BYTES:
+        return JsonResponse({'success': False, 'message': 'Notes size exceeds the 5 MB limit.'}, status=400)
+
+    notes_obj, created = UserTopicNotes.objects.update_or_create(
+        user=request.user,
+        topic=topic,
+        defaults={'notes_text': notes_text}
+    )
+
+    return JsonResponse({
+        'success': True,
+        'size_kb': notes_obj.notes_size_kb()
+    })

@@ -71,6 +71,26 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
+        .btn-delete-cat {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-delete-cat:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(239,68,68,0.3);
+        }
+
         .empty-state {
             text-align: center;
             color: #888;
@@ -83,7 +103,12 @@
     <div class="container">
         <div class="header">
             <h1>{{ category.name }} Subjects Syllabus</h1>
-            <a href="{% url 'syllabus_landing' %}" class="back-btn">← Back to Syllabus</a>
+            <div style="display:flex; gap:10px; align-items:center;">
+                {% if request.user.is_superuser %}
+                <a href="{% url 'delete_category' category.id %}" class="btn-delete-cat">🗑️ Delete Category</a>
+                {% endif %}
+                <a href="{% url 'syllabus_landing' %}" class="back-btn">← Back to Syllabus</a>
+            </div>
         </div>
 
         {% if subjects %}

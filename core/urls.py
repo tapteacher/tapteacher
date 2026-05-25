@@ -32,6 +32,9 @@ urlpatterns = [
          views.syllabus_topic_edit_view, name='syllabus_topic_edit'),
     path('delete_topic/<int:topic_id>/', views.delete_topic, name='delete_topic'),
     path('delete-topic-file/<int:file_id>/', views.delete_topic_file, name='delete_topic_file'),
+    path('delete-category/<int:category_id>/', views.delete_category, name='delete_category'),
+    path('add-mcq-to-topic/<int:topic_id>/', views.add_mcq_to_topic, name='add_mcq_to_topic'),
+    path('delete-mcq-from-topic/<int:topic_id>/', views.delete_mcq_from_topic, name='delete_mcq_from_topic'),
     path('api/toggle-read/<int:vacancy_id>/', views.toggle_vacancy_read, name='toggle_vacancy_read'),
     
     # Admin User Management
@@ -46,4 +49,9 @@ urlpatterns = [
     path('api/save-location-preference/', views.save_location_preference, name='save_location_preference'),
     path('api/erase-location-preference/', views.erase_location_preference, name='erase_location_preference'),
     path('api/get-admin-roles/', views.get_admin_roles_api, name='get_admin_roles_api'),
+    
+    # MCQ and User Notes Routes
+    path('guidance/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/mcq/', views.syllabus_topic_mcq_view, name='syllabus_topic_mcq'),
+    path('guidance/topic/<int:topic_id>/mcq/submit/', views.syllabus_topic_mcq_submit_view, name='syllabus_topic_mcq_submit'),
+    path('guidance/topic/<int:topic_id>/notes/save/', views.syllabus_topic_notes_save_view, name='syllabus_topic_notes_save'),
 ]

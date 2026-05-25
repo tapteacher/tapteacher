@@ -19,11 +19,9 @@
         <div class="sidebar-main-text">Private Coaching & Tution Vacancy</div>
         <div class="sidebar-sub-text">Personal Coaching Centers</div>
     </a>
-    {% if not is_hr %}
     <a href="{% url 'syllabus_landing' %}"
         class="sidebar-item {% if request.resolver_match.url_name == 'syllabus_landing' %}active{% endif %} {% if blink_syllabus %}blink-red{% endif %}">
         <div class="sidebar-main-text">Syllabus (Guidance)</div>
         <div class="sidebar-sub-text">Preparation Material & Topics</div>
     </a>
-    {% endif %}
 </div>

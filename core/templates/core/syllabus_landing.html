@@ -104,15 +104,13 @@
             <h1>Vacancy Guidance</h1>
         </div>
 
-        <div class="category-grid">
-            <a href="{% url 'syllabus_category' 'prt' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                class="category-card {% if blink_prt %}blink-red{% endif %}">PRT Vacancy</a>
-            <a href="{% url 'syllabus_category' 'tgt' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                class="category-card {% if blink_tgt %}blink-red{% endif %}">TGT Vacancy</a>
-            <a href="{% url 'syllabus_category' 'pgt' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                class="category-card {% if blink_pgt %}blink-red{% endif %}">PGT Vacancy</a>
-            <a href="{% url 'syllabus_category' 'other' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                class="category-card {% if blink_other %}blink-red{% endif %}">Other Vacancy</a>
+        <div class="category-grid" style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            {% for cat in categories %}
+            <a href="{% url 'syllabus_category' cat.slug %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                class="category-card {% if cat.should_blink %}blink-red{% endif %}">
+                {{ cat.name }}
+            </a>
+            {% endfor %}
         </div>
     </div>
 </body>

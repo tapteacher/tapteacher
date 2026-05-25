@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Category — TapTeacher</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 48px 44px;
+            max-width: 520px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+            text-align: center;
+        }
+        .icon { font-size: 56px; margin-bottom: 20px; }
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 12px;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 16px 20px;
+            font-size: 14px;
+            color: #856404;
+            text-align: left;
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+        .category-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ef4444;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 10px 20px;
+            display: inline-block;
+            margin-bottom: 24px;
+        }
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .btn-cancel {
+            padding: 12px 28px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            color: #555;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-cancel:hover { background: #f5f5f5; }
+        .btn-delete {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            background: #ef4444;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-delete:hover { background: #dc2626; transform: translateY(-1px); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🗑️</div>
+        <h1>Delete Category?</h1>
+        <div class="category-name">{{ category.name }}</div>
+        <div class="warning-box">
+            <strong>⚠️ This action cannot be undone.</strong><br><br>
+            Deleting this category will permanently remove:<br>
+            • All <strong>subjects</strong> under it<br>
+            • All <strong>topics</strong>, files, and notes<br>
+            • All <strong>MCQ sets</strong> and candidate attempt records
+        </div>
+        <div class="btn-row">
+            <a href="{% url 'syllabus_landing' %}" class="btn-cancel">← Cancel</a>
+            <form action="{% url 'delete_category' category.id %}" method="POST" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-delete">Yes, Delete Permanently</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

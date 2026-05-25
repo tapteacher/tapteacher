@@ -1,115 +1,509 @@
 <!DOCTYPE html>
 <html lang="en">
-
+ 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ topic.title }} - TapTeacher</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #e0e7ff;
+            --accent: #2563eb;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+
         body {
             margin: 0;
             font-family: 'Inter', sans-serif;
-            background: #fcfcfc;
-            color: #333;
+            background: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.5;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 40px 20px;
         }
 
+        /* Header section styling */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 40px;
-            border-bottom: 1px solid #111;
+            margin-bottom: 30px;
             padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .header h1 {
-            font-size: 24px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 28px;
             font-weight: 700;
             margin: 0;
+            color: var(--text-main);
         }
 
-        .back-btn {
-            text-decoration: none;
-            color: #666;
-            font-size: 14px;
-            border: 1px solid #ddd;
-            padding: 8px 16px;
-            border-radius: 4px;
-            background: white;
-            transition: all 0.3s ease;
+        .subject-tag {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
         }
 
-        .back-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .topic-content {
-            background: white;
-            border: 1px solid #eee;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            padding: 30px;
-        }
-
-        .topic-header-title {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: #111;
-        }
-
-        .topic-desc {
-            margin-bottom: 30px;
-            color: #555;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-
-        .attachments {
+        /* Action Buttons */
+        .btn-group {
             display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 30px;
+            gap: 10px;
+            align-items: center;
         }
 
-        .attachment-link {
+        .btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 20px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            text-decoration: none;
-            color: #333;
-            font-size: 14px;
-            font-weight: 500;
-            background: #fff;
-            transition: all 0.3s ease;
-        }
-
-        .attachment-link:hover {
-            border-color: #111;
-            background: #f9f9f9;
-            transform: translateY(-3px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-        }
-
-        .topic-image {
-            margin-top: 20px;
-            max-width: 100%;
+            padding: 10px 18px;
             border-radius: 8px;
-            border: 1px solid #eee;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        /* Loading Indicator */
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            color: var(--text-main);
+            border-color: var(--text-muted);
+            background: var(--bg-main);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: 1px solid transparent;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+            border: 1px solid transparent;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Description card */
+        .desc-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .desc-card h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .topic-desc {
+            color: var(--text-main);
+            font-size: 15px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            margin: 0;
+        }
+
+        /* 3-Box Tabs Navigation */
+        .tabs-wrapper {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            margin-bottom: 40px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: #fafbfe;
+        }
+
+        .tab-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 20px;
+            border: none;
+            background: none;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(79, 70, 229, 0.02);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Materials list view */
+        .materials-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .material-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+
+        .material-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .material-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .material-icon {
+            font-size: 24px;
+        }
+
+        .material-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .material-type {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            background: var(--bg-main);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Images view */
+        .gallery-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 25px 0 15px;
+            color: var(--text-main);
+        }
+
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .img-container {
+            position: relative;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .img-container img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Quiz Tab Layout */
+        .quiz-status-card {
+            background: linear-gradient(135deg, #f5f3ff 0%, #edd8fc 100%);
+            border: 1px solid #ddd6fe;
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .quiz-info-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .quiz-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #4c1d95;
+        }
+
+        .quiz-meta {
+            font-size: 13px;
+            color: #5b21b6;
+            font-weight: 500;
+            display: flex;
+            gap: 15px;
+        }
+
+        .score-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px;
+            margin-top: 15px;
+        }
+
+        .score-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .score-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .stat-val.correct { color: var(--success); }
+        .stat-val.wrong { color: var(--danger); }
+        .stat-val.skipped { color: var(--text-muted); }
+
+        .stat-lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* Personal Notes Tab */
+        .notes-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .notes-textarea {
+            width: 100%;
+            min-height: 250px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: vertical;
+            box-sizing: border-box;
+            background: #fafafc;
+            color: var(--text-main);
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .notes-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #ffffff;
+        }
+
+        .notes-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notes-status {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-pill {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-pill.saving {
+            background: #eab308;
+            animation: pulse 1s infinite alternate;
+        }
+
+        .status-pill.saved {
+            background: var(--success);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.3); opacity: 1; }
+        }
+
+        /* Analytics Panel styling */
+        .analytics-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 40px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .analytics-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .analytics-table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .analytics-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .analytics-table th {
+            background: #fafbfe;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .analytics-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .analytics-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .analytics-table tr:hover td {
+            background: #fafbfe;
+            cursor: pointer;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .badge-success {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .badge-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .badge-neutral {
+            background: var(--bg-main);
+            color: var(--text-muted);
+        }
+
+        /* Generic Loader overlay */
         #download-loader {
             display: none;
             position: fixed;
@@ -119,171 +513,285 @@
             background: rgba(255, 255, 255, 0.95);
             padding: 25px 40px;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-lg);
             z-index: 1000;
             text-align: center;
+            border: 1px solid var(--border-color);
         }
 
         .spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #111;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 15px;
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .edit-mode-only,
-        .edit-active {
-            display: none !important;
-        }
-
-        .edit-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 22px;
-            font-weight: 700;
-            font-family: inherit;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-        }
-
-        .edit-textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-            font-family: inherit;
-            min-height: 150px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-            resize: vertical;
-        }
-
-        .btn-edit {
-            background: #f0f0f0;
-            color: #333;
-            border: 1px solid #ddd;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-        .btn-save {
-            background: #111;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
-
+ 
 <body>
     <div class="container">
+        
+        <!-- Header -->
         <div class="header">
             <div>
-                <div style="font-size: 14px; color: #666; margin-bottom: 5px;">{{ subject.name }}</div>
+                <div class="subject-tag">{{ category.name }} &bull; {{ subject.name }}</div>
                 <h1>{{ topic.title }}</h1>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
+            <div class="btn-group">
                 {% if request.user.is_superuser %}
                 <a href="{% url 'syllabus_topic_edit' category.slug subject.id topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                    class="btn-edit view-mode-only">Edit Topic</a>
-                <form
-                    action="{% url 'delete_topic' topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                    method="POST" class="view-mode-only"
-                    onsubmit="return confirm('Are you sure you want to permanently delete this topic? This action cannot be undone.');">
-                    {% csrf_token %}
-                    <button type="submit"
-                        style="background: #ff4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500;">Delete
-                        Topic</button>
-                </form>
+                    class="btn btn-secondary">Edit Topic</a>
+                <a href="{% url 'delete_topic' topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                   class="btn btn-danger">🗑️ Delete Topic</a>
                 {% endif %}
                 <a href="{% url 'syllabus_subject' category_slug=category.slug subject_id=subject.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                    class="back-btn view-mode-only">←
-                    Back to Topics</a>
+                    class="btn btn-secondary">← Back to Topics</a>
             </div>
         </div>
 
-        <div class="topic-content" id="topic-content-container">
-            <h2 class="topic-header-title view-mode-only">{{ topic.title }}</h2>
+        <!-- Description Card -->
+        {% if topic.description %}
+        <div class="desc-card">
+            <h3>Description</h3>
+            <div class="topic-desc">{{ topic.description }}</div>
+        </div>
+        {% endif %}
 
-            {% if topic.description %}
-            <div class="topic-desc view-mode-only">{{ topic.description|linebreaks }}</div>
-            {% endif %}
-
-            {% if request.user.is_superuser %}
-            <!-- Editing moved to a separate page -->
-            {% endif %}
-
-            <div class="attachments view-mode-only">
-                {% if topic.ppt_file %}
-                <a href="{{ topic.ppt_file.url }}" class="attachment-link" target="_blank">
-                    📄 Download PPT (Original)
-                </a>
-                {% endif %}
-
-                {% if topic.pdf_file %}
-                <a href="{{ topic.pdf_file.url }}" class="attachment-link" target="_blank">
-                    📑 Download PDF (Original)
-                </a>
-                {% endif %}
-
-                {% for file in topic.files.all %}
-                {% if file.file_type != 'image' %}
-                <a href="{{ file.file.url }}" class="attachment-link" target="_blank">
-                    {% if file.file_type == 'ppt' %}PPT{% elif file.file_type == 'pdf' %}PDF{% else %}File{% endif %}
-                </a>
-                {% endif %}
-                {% endfor %}
+        <!-- Three-Box Tabs Wrapper -->
+        <div class="tabs-wrapper">
+            
+            <!-- Tab Headers -->
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('materials')">📁 Material Files</button>
+                <button class="tab-btn" onclick="switchTab('quizzes')">📝 Topic Quizzes</button>
+                <button class="tab-btn" onclick="switchTab('notes')">✍️ Personal Notes</button>
             </div>
 
-            <div class="topic-images view-mode-only" style="margin-top: 20px;">
-                {% if topic.image %}
-                <div style="position:relative; display:inline-block; margin-bottom:12px;">
-                    <img src="{{ topic.image.url }}" alt="Topic Image" class="topic-image"
-                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div
-                        style="display:none; width:100%; min-height:80px; background:#f9f9f9; border:1px dashed #ddd; border-radius:8px; align-items:center; justify-content:center; font-size:13px; color:#999; padding:20px;">
-                        ⚠️ Image could not be loaded</div>
+            <!-- Tab 1: Materials & Files -->
+            <div class="tab-content active" id="tab-materials">
+                <div class="materials-grid">
+                    {% if topic.ppt_file %}
+                    <a href="{{ topic.ppt_file.url }}" class="material-item" target="_blank">
+                        <div class="material-info">
+                            <span class="material-icon">📄</span>
+                            <div>
+                                <div class="material-name">Download PPT (Original)</div>
+                                <span class="material-type">ppt</span>
+                            </div>
+                        </div>
+                        <span class="btn btn-secondary" style="padding: 6px 12px; font-size:12px;">Open</span>
+                    </a>
+                    {% endif %}
+ 
+                    {% if topic.pdf_file %}
+                    <a href="{{ topic.pdf_file.url }}" class="material-item" target="_blank">
+                        <div class="material-info">
+                            <span class="material-icon">📑</span>
+                            <div>
+                                <div class="material-name">Download PDF (Original)</div>
+                                <span class="material-type">pdf</span>
+                            </div>
+                        </div>
+                        <span class="btn btn-secondary" style="padding: 6px 12px; font-size:12px;">Open</span>
+                    </a>
+                    {% endif %}
+ 
+                    {% for file in topic.files.all %}
+                    {% if file.file_type != 'image' %}
+                    <a href="{{ file.file.url }}" class="material-item" target="_blank">
+                        <div class="material-info">
+                            <span class="material-icon">
+                                {% if file.file_type == 'ppt' %}📄{% elif file.file_type == 'pdf' %}📑{% else %}📁{% endif %}
+                            </span>
+                            <div>
+                                <div class="material-name">{{ file.file.name }}</div>
+                                <span class="material-type">{{ file.file_type }}</span>
+                            </div>
+                        </div>
+                        <span class="btn btn-secondary" style="padding: 6px 12px; font-size:12px;">Open</span>
+                    </a>
+                    {% endif %}
+                    {% empty %}
+                        {% if not topic.ppt_file and not topic.pdf_file %}
+                        <div style="text-align: center; color: var(--text-muted); padding: 20px 0;">No document files available for this topic.</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Gallery of images if any -->
+                {% if topic.image or topic.files.all %}
+                <div class="gallery-title">Visual References & Charts</div>
+                <div class="images-grid">
+                    {% if topic.image %}
+                    <div class="img-container">
+                        <img src="{{ topic.image.url }}" alt="Topic Visual" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="display:none; height:180px; background:#f9f9f9; align-items:center; justify-content:center; font-size:12px; color:#999; text-align:center; padding:10px;">
+                            ⚠️ Image could not be loaded
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% for file in topic.files.all %}
+                    {% if file.file_type == 'image' %}
+                    <div class="img-container">
+                        <img src="{{ file.file.url }}" alt="Attachment Visual" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="display:none; height:180px; background:#f9f9f9; align-items:center; justify-content:center; font-size:12px; color:#999; text-align:center; padding:10px;">
+                            ⚠️ Image could not be loaded
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Tab 2: Quizzes (MCQ) -->
+            <div class="tab-content" id="tab-quizzes">
+                {% if mcq_set %}
+                <div class="quiz-status-card">
+                    <div class="quiz-info-block">
+                        <div class="quiz-title">Subject Practice MCQ Set</div>
+                        <div class="quiz-meta">
+                            <span>⏱️ Timer: {{ mcq_set.time_limit_minutes }} mins</span>
+                            <span>❓ Total Questions: {{ mcq_set.questions.count }}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        {% if request.user.is_superuser %}
+                        <a href="{% url 'delete_mcq_from_topic' topic.id %}" class="btn btn-danger" style="padding: 12px 24px; font-size:15px; border-radius:8px; text-decoration: none;">
+                            🗑️ Delete MCQ Set
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'syllabus_topic_mcq' category.slug subject.id topic.id %}" class="btn btn-primary" style="padding: 12px 24px; font-size:15px; border-radius:8px;">
+                            🚀 Start MCQ Attempt
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Last Attempt Display -->
+                {% if latest_attempt %}
+                <div class="score-card">
+                    <div class="score-title">Your Latest Attempt ({{ latest_attempt.attempted_at|date:"d M Y, h:i A" }})</div>
+                    <div class="score-stats">
+                        <div>
+                            <div class="stat-val correct">{{ latest_attempt.correct_count }}</div>
+                            <div class="stat-lbl">Correct</div>
+                        </div>
+                        <div>
+                            <div class="stat-val wrong">{{ latest_attempt.wrong_count }}</div>
+                            <div class="stat-lbl">Wrong</div>
+                        </div>
+                        <div>
+                            <div class="stat-val skipped">{{ latest_attempt.skipped_count }}</div>
+                            <div class="stat-lbl">Skipped</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center; font-size: 14px; font-weight: 600; color: var(--text-main);">
+                        Total Score: {{ latest_attempt.score_percentage|floatformat:1 }}% &bull; Time Taken: {{ latest_attempt.formatted_time_taken }}
+                    </div>
+                </div>
+                {% else %}
+                <div style="text-align: center; color: var(--text-muted); padding: 10px 0; font-size: 14px;">
+                    You have not attempted this quiz yet. Click the button above to begin.
                 </div>
                 {% endif %}
 
-                {% for file in topic.files.all %}
-                {% if file.file_type == 'image' %}
-                <div style="position:relative; display:inline-block; margin-bottom:12px;">
-                    <img src="{{ file.file.url }}" alt="Attachment Image" class="topic-image"
-                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div
-                        style="display:none; width:100%; min-height:80px; background:#f9f9f9; border:1px dashed #ddd; border-radius:8px; align-items:center; justify-content:center; font-size:13px; color:#999; padding:20px;">
-                        ⚠️ Image could not be loaded. Please contact the admin to re-upload this image.</div>
+
+                {% else %}
+                <div style="text-align: center; color: var(--text-muted); padding: 30px 0;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">📋</div>
+                    <div>No MCQs have been assigned to this topic yet.</div>
+                </div>
+                {% if request.user.is_superuser %}
+                <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted); text-align: center;">
+                    To add MCQs, go to <strong>Admin Dashboard → Upload Syllabus</strong> and include MCQs when creating the topic, or use the <strong>Edit Topic</strong> page to attach an MCQ set.
                 </div>
                 {% endif %}
-                {% endfor %}
+
+                {% endif %}{# closes if mcq_set #}
             </div>
+
+
+            <!-- Tab 3: Personal Notes -->
+            <div class="tab-content" id="tab-notes">
+                <div class="notes-container">
+                    <div style="font-size: 14px; color: var(--text-muted); font-weight: 500;">
+                        Draft your personalized study notes for this topic below. Notes are autosaved as you type and limited to a max size of 5.0 MB.
+                    </div>
+                    <textarea class="notes-textarea" id="notes-textarea-input" placeholder="Start typing your notes here..." oninput="onNotesInput()">{{ user_notes.notes_text|default:'' }}</textarea>
+                    
+                    <div class="notes-footer">
+                        <div class="notes-status" id="notes-save-status">
+                            <span class="status-pill" id="status-indicator"></span>
+                            <span id="status-text">Drafting notes</span>
+                        </div>
+                        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted);" id="notes-char-counter">
+                            5.00 MB remaining
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
+        <!-- Admin Attempt Analytics Dashboard (if user is superuser and mcq_set exists) -->
+        {% if request.user.is_superuser and mcq_set %}
+        <div class="analytics-card">
+            <h3 class="analytics-title">📊 Candidates MCQ Analytics (Superadmin View)</h3>
+            <div class="analytics-table-wrapper">
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Candidate Name</th>
+                            <th>Correct</th>
+                            <th>Wrong</th>
+                            <th>Skipped</th>
+                            <th>Score %</th>
+                            <th>Time Spent</th>
+                            <th>Attempted At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attempt in all_attempts %}
+                        <tr onclick="window.location.href='{% url 'user_dashboard_admin' attempt.user.id %}'">
+                            <td style="font-weight: 600; color: var(--primary);">
+                                {{ attempt.user.first_name }} {{ attempt.user.last_name }} ({{ attempt.user.email }})
+                            </td>
+                            <td style="color: var(--success); font-weight: 700;">{{ attempt.correct_count }}</td>
+                            <td style="color: var(--danger); font-weight: 700;">{{ attempt.wrong_count }}</td>
+                            <td>{{ attempt.skipped_count }}</td>
+                            <td>
+                                <span class="badge {% if attempt.score_percentage >= 50 %}badge-success{% else %}badge-danger{% endif %}">
+                                    {{ attempt.score_percentage|floatformat:1 }}%
+                                </span>
+                            </td>
+                            <td>{{ attempt.formatted_time_taken }}</td>
+                            <td style="color: var(--text-muted); font-size: 13px;">
+                                {{ attempt.attempted_at|date:"d M Y, h:i A" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                No attempts registered for this topic yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- File download visual loader -->
         <div id="download-loader">
             <div class="spinner"></div>
             <div style="font-weight: 600; color: #111;">Opening file...</div>
@@ -293,35 +801,253 @@
     </div>
 
     <script>
-        // Fix broken Cloudinary PDF URLs (those uploaded as 'image' type without extension)
-        document.querySelectorAll('.attachment-link').forEach(link => {
-            const text = link.textContent.trim().toUpperCase();
-            if (text.includes('PDF')) {
-                let url = link.getAttribute('href');
-                // If it's a Cloudinary image upload URL for a PDF and missing the extension
-                if (url && url.includes('/image/upload/') && !url.toLowerCase().endsWith('.pdf')) {
-                    link.setAttribute('href', url + '.pdf');
+        // Tab switching logic
+        function switchTab(tabId) {
+            // Remove active class from buttons & contents
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Find current button & container
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick').includes(tabId));
+            if (activeBtn) activeBtn.classList.add('active');
+
+            const activeContent = document.getElementById('tab-' + tabId);
+            if (activeContent) activeContent.classList.add('active');
+
+            // If switching to notes tab, trigger calculation
+            if (tabId === 'notes') {
+                onNotesInput();
+            }
+        }
+
+        // Notes Autosaving with 5MB constraint logic
+        let saveTimeout = null;
+        const textarea = document.getElementById('notes-textarea-input');
+        const counterEl = document.getElementById('notes-char-counter');
+        const statusText = document.getElementById('status-text');
+        const statusIndicator = document.getElementById('status-indicator');
+        const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+
+        function onNotesInput() {
+            if (!textarea) return;
+            const content = textarea.value;
+            
+            // Calculate size in bytes
+            const bytes = new Blob([content]).size;
+            const remainingBytes = Math.max(0, MAX_BYTES - bytes);
+            const remainingMB = (remainingBytes / (1024 * 1024)).toFixed(2);
+            
+            counterEl.textContent = `${remainingMB} MB remaining`;
+
+            // If byte size limit exceeded, truncate content
+            if (bytes > MAX_BYTES) {
+                counterEl.style.color = 'var(--danger)';
+                // Alert and truncate
+                alert('Notes character count exceeds the 5.0 MB storage limit. Truncating text.');
+                
+                // Truncate to maximum characters safely matching 5MB
+                let truncated = content;
+                while (new Blob([truncated]).size > MAX_BYTES) {
+                    truncated = truncated.slice(0, -100);
                 }
+                textarea.value = truncated;
+                onNotesInput();
+                return;
+            } else {
+                counterEl.style.color = 'var(--text-muted)';
+            }
+
+            // Autosave trigger (debounce 1.5 seconds)
+            clearTimeout(saveTimeout);
+            setStatus('Drafting notes', '');
+            
+            saveTimeout = setTimeout(() => {
+                saveNotesToServer(content);
+            }, 1500);
+        }
+
+        function setStatus(text, state) {
+            statusText.textContent = text;
+            statusIndicator.className = 'status-pill';
+            if (state === 'saving') {
+                statusIndicator.classList.add('saving');
+            } else if (state === 'saved') {
+                statusIndicator.classList.add('saved');
+            }
+        }
+
+        function saveNotesToServer(text) {
+            setStatus('Saving to server...', 'saving');
+            fetch("{% url 'syllabus_topic_notes_save' topic.id %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ notes: text })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Save failed');
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    setStatus('All changes saved', 'saved');
+                } else {
+                    setStatus('Error: ' + data.message, 'error');
+                }
+            })
+            .catch(err => {
+                setStatus('Network connection error', 'error');
+            });
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Clean broken Cloudinary URLs
+        document.querySelectorAll('.material-item').forEach(link => {
+            let url = link.getAttribute('href');
+            if (url && url.includes('/image/upload/') && !url.toLowerCase().endsWith('.pdf') && link.querySelector('.material-type').textContent === 'pdf') {
+                link.setAttribute('href', url + '.pdf');
             }
         });
 
-        // Edit mode has been moved to a separate page.
-        function toggleEditMode() {
-            window.location.href = "{% url 'syllabus_topic_edit' category.slug subject.id topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}";
-        }
-
-        document.querySelectorAll('.attachment-link').forEach(link => {
+        // Open loaders
+        document.querySelectorAll('.material-item').forEach(link => {
             link.addEventListener('click', function () {
                 const loader = document.getElementById('download-loader');
                 loader.style.display = 'block';
-
-                // Hide loader after 3 seconds (browser usually starts download by then)
                 setTimeout(() => {
                     loader.style.display = 'none';
                 }, 3000);
             });
         });
+
+        // ===== Add MCQ Panel JS =====
+        let addMcqQCounter = 0;
+
+        function toggleAddMcqMode() {
+            const mode = document.querySelector('input[name="add_mcq_mode"]:checked')?.value;
+            const aiSec  = document.getElementById('add-mcq-ai-section');
+            const manSec = document.getElementById('add-mcq-manual-section');
+            if (!aiSec || !manSec) return;
+            aiSec.style.display  = (mode === 'ai')     ? 'block' : 'none';
+            manSec.style.display = (mode === 'manual') ? 'block' : 'none';
+        }
+
+        function addManualMcqQuestion() {
+            const container = document.getElementById('add-mcq-manual-questions');
+            if (!container) return;
+            const qid = addMcqQCounter++;
+            const div = document.createElement('div');
+            div.id = `amq-${qid}`;
+            div.style.cssText = 'background:white; padding:15px; border-radius:8px; border:1px solid #ddd;';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <strong style="font-size:13px; color:#333;">Question ${qid + 1}</strong>
+                    <button type="button" onclick="document.getElementById('amq-${qid}').remove()"
+                        style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:12px;">✕ Remove</button>
+                </div>
+                <input type="text" id="amq-text-${qid}" placeholder="Enter question text..."
+                    style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; margin-bottom:12px; font-size:13px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <label style="font-size:12px; font-weight:600; color:#555;">Options:</label>
+                    <select onchange="setAmqOptionCount(${qid}, this.value)"
+                        style="padding:5px 8px; border:1px solid #ddd; border-radius:4px; font-size:13px;">
+                        <option value="2">2</option><option value="3">3</option>
+                        <option value="4" selected>4</option><option value="5">5</option>
+                        <option value="6">6</option>
+                    </select>
+                </div>
+                <div id="amq-opts-${qid}"></div>
+            `;
+            container.appendChild(div);
+            setAmqOptionCount(qid, 4);
+        }
+
+        function setAmqOptionCount(qid, count) {
+            const container = document.getElementById(`amq-opts-${qid}`);
+            if (!container) return;
+            const existing = {};
+            container.querySelectorAll('input[type="text"]').forEach((inp, i) => { existing[i] = inp.value; });
+            let currentCorrect = 0;
+            const cr = container.querySelector('input[type="radio"]:checked');
+            if (cr) currentCorrect = parseInt(cr.value);
+            container.innerHTML = '';
+            for (let i = 0; i < parseInt(count); i++) {
+                const lbl = String.fromCharCode(65 + i);
+                const d = document.createElement('div');
+                d.style.cssText = 'display:flex; align-items:center; gap:10px; margin-bottom:8px;';
+                d.innerHTML = `
+                    <span style="font-weight:700; min-width:20px; color:#3a4aad; font-size:13px;">${lbl}</span>
+                    <input type="text" id="amq-opt-${qid}-${i}" placeholder="Option ${lbl}…"
+                        value="${existing[i] || ''}"
+                        style="flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:13px;">
+                    <label style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; white-space:nowrap; color:#2e7d32; font-weight:500;">
+                        <input type="radio" name="amq-correct-${qid}" value="${i}" ${i === currentCorrect ? 'checked' : ''}> ✓ Correct
+                    </label>`;
+                container.appendChild(d);
+            }
+        }
+
+
+
+        function prepareAddMcqSubmit(event) {
+            const form = event.target;
+            const modeEl = form.querySelector('input[name="add_mcq_mode"]:checked');
+            const mode = modeEl ? modeEl.value : 'ai';
+
+            const jsonHidden   = form.querySelector('[id$="-json-hidden"]');
+            const manualHidden = form.querySelector('[id$="-manual-hidden"]');
+            const aiTextarea   = form.querySelector('[id$="-ai-json"]');
+
+            if (mode === 'ai') {
+                const raw = aiTextarea ? aiTextarea.value.trim() : '';
+                if (jsonHidden)   { jsonHidden.name = 'mcq_json'; jsonHidden.value = raw; }
+                if (manualHidden) { manualHidden.name = ''; }
+            } else {
+                const serialized = serializeAddMcqManual(form);
+                if (manualHidden) { manualHidden.name = 'mcq_json'; manualHidden.value = serialized; }
+                if (jsonHidden)   { jsonHidden.name = ''; }
+            }
+            // Let the form submit normally
+        }
+
+        function serializeAddMcqManual(form) {
+            const root = form || document;
+            const container = root.querySelector('[id$="-manual-questions"]');
+            if (!container) return '[]';
+            const questions = [];
+            container.querySelectorAll('[id^="amq-"]').forEach(qDiv => {
+                const qid = qDiv.id.replace('amq-', '');
+                const txtEl = document.getElementById(`amq-text-${qid}`);
+                if (!txtEl || !txtEl.value.trim()) return;
+                const opts = [];
+                let correctIdx = 0;
+                const optContainer = document.getElementById(`amq-opts-${qid}`);
+                if (optContainer) {
+                    optContainer.querySelectorAll('input[type="text"]').forEach(inp => opts.push(inp.value.trim()));
+                    const cr2 = optContainer.querySelector('input[type="radio"]:checked');
+                    if (cr2) correctIdx = parseInt(cr2.value);
+                }
+                questions.push({ question: txtEl.value.trim(), options: opts, correct: correctIdx });
+            });
+            return JSON.stringify(questions);
+        }
     </script>
 </body>
-
+ 
 </html>

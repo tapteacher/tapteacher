@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete MCQ Set — TapTeacher</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 48px 44px;
+            max-width: 520px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+            text-align: center;
+        }
+        .icon { font-size: 56px; margin-bottom: 20px; }
+        h1 { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 8px; }
+        .breadcrumb { font-size: 13px; color: #888; margin-bottom: 20px; }
+        .topic-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ef4444;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 10px 20px;
+            display: inline-block;
+            margin-bottom: 22px;
+            word-break: break-word;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-size: 13px;
+            color: #856404;
+            text-align: left;
+            margin-bottom: 28px;
+            line-height: 1.65;
+        }
+        .btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn-cancel {
+            padding: 12px 28px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            color: #555;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-cancel:hover { background: #f5f5f5; }
+        .btn-delete {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            background: #ef4444;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-delete:hover { background: #dc2626; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.35); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🗑️</div>
+        <h1>Delete MCQ Set?</h1>
+        <div class="breadcrumb">{{ category.name }} › {{ subject.name }} › {{ topic.title }}</div>
+        <div class="topic-name">MCQ Practice Set ({{ mcq_set.questions.count }} Questions)</div>
+        <div class="warning-box">
+            <strong>⚠️ This action cannot be undone.</strong><br><br>
+            Deleting this MCQ set will permanently remove:<br>
+            • All MCQ questions and their answers/options<br>
+            • All candidate practice test attempt history and performance results for this topic
+        </div>
+        <div class="btn-row">
+            <a href="{% url 'syllabus_topic_detail' category.slug subject.id topic.id %}"
+               class="btn-cancel">← Cancel</a>
+            <form action="{% url 'delete_mcq_from_topic' topic.id %}"
+                  method="POST" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-delete">Yes, Delete Permanently</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

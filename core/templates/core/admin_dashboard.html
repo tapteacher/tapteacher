@@ -380,14 +380,15 @@
 
                     <!-- Vacancy Type -->
                     <div class="form-group" style="margin-bottom: 20px;">
-                        <label>Select a Vacancy Type *</label>
-                        <input list="syllabus-vacancy-types" name="guidance_category" placeholder="Select or type category (e.g. PRT)" required>
+                        <label>Vacancy / Category Type * <span style="font-size:12px; color:#888; font-weight:400;">(type anything — PRT, NTT, Librarian, DSSSB, etc.)</span></label>
+                        <input list="syllabus-vacancy-types" name="guidance_category" placeholder="Type or select category (e.g. PRT, NTT, Sports Teacher...)" required>
                         <datalist id="syllabus-vacancy-types">
                             <option value="prt">PRT Vacancy</option>
                             <option value="tgt">TGT Vacancy</option>
                             <option value="pgt">PGT Vacancy</option>
                             <option value="other">Other Vacancy</option>
                         </datalist>
+                        <p style="font-size:11px; color:#888; margin-top:4px;">If this category already exists, topics will be added inside it (no duplicate created).</p>
                     </div>
 
                     <!-- Subject -->
@@ -1223,9 +1224,10 @@
         }
 
         let topicCounter = 0;
+        let manualQCounters = {};
+
         function addTopicBox() {
             const container = document.getElementById('topics-container');
-            // Collapse previous
             const prevs = container.children;
             if (prevs.length > 0) {
                 const last = prevs[prevs.length - 1];
@@ -1236,13 +1238,10 @@
                         const header = last.querySelector('.topic-header');
                         const exp = document.createElement('button');
                         exp.className = 'btn-expand-topic';
-                        exp.textContent = 'Expand';
-                        exp.style.cssText = "margin-left: auto; margin-right: 10px; background:none; border:none; cursor:pointer;";
-                        exp.type = "button";
-                        exp.onclick = function () {
-                            content.style.display = 'block';
-                            exp.remove();
-                        };
+                        exp.textContent = '🔽 Expand';
+                        exp.style.cssText = 'margin-left:auto; margin-right:10px; background:none; border:none; cursor:pointer; font-size:13px;';
+                        exp.type = 'button';
+                        exp.onclick = function() { content.style.display='block'; exp.remove(); };
                         header.appendChild(exp);
                     }
                 }
@@ -1250,10 +1249,9 @@
 
             const id = topicCounter++;
             document.getElementById('syl-topic-count').value = topicCounter;
-
             const box = document.createElement('div');
             box.className = 'post-detail-box';
-            box.style.borderLeft = "4px solid #111";
+            box.style.borderLeft = '4px solid #111';
             box.innerHTML = `
                 <div class="topic-header" style="display:flex; align-items:center; margin-bottom:15px;">
                     <strong style="font-size:16px;">New Topic</strong>
@@ -1267,8 +1265,8 @@
                         <label>Description</label>
                         <textarea name="topic_desc_${id}" rows="3"></textarea>
                     </div>
-                    <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #eee;">
-                        <div style="font-weight:500; margin-bottom:10px;">Attachements</div>
+                    <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #eee; margin-bottom:15px;">
+                        <div style="font-weight:500; margin-bottom:10px;">Attachments</div>
                         <div class="form-group" style="margin-bottom:10px;">
                             <label>PPT Presentation (Select Multiple)</label>
                             <input type="file" name="topic_ppt_${id}[]" accept=".ppt,.pptx" multiple>
@@ -1282,9 +1280,130 @@
                             <input type="file" name="topic_image_${id}[]" accept="image/*" multiple>
                         </div>
                     </div>
+
+                    <!-- ===== MCQ SECTION ===== -->
+                    <div style="background:#f0f4ff; padding:16px; border-radius:8px; border:1px solid #c7d4ff;">
+                        <div style="font-weight:600; margin-bottom:12px; color:#3a4aad; font-size:14px;">📝 Add MCQs to this Topic <span style="font-weight:400; font-size:12px; color:#888;">(Optional)</span></div>
+                        <div style="display:flex; gap:25px; margin-bottom:14px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
+                                <input type="radio" name="topic_mcq_mode_${id}" value="none" checked onchange="toggleMcqMode(${id})"> No MCQs
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
+                                <input type="radio" name="topic_mcq_mode_${id}" value="ai" onchange="toggleMcqMode(${id})"> 🤖 Paste AI-Generated Code
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
+                                <input type="radio" name="topic_mcq_mode_${id}" value="manual" onchange="toggleMcqMode(${id})"> ✏️ Manual Entry
+                            </label>
+                        </div>
+
+                        <!-- Timer -->
+                        <div id="mcq-timer-${id}" style="display:none; margin-bottom:14px; background:white; padding:12px; border-radius:6px; border:1px solid #e0e0e0;">
+                            <label style="font-size:13px; font-weight:600; display:block; margin-bottom:8px;">⏱️ Total Time Limit for this MCQ Set</label>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="number" name="topic_mcq_timer_${id}" min="1" max="180" value="10" style="width:75px; padding:8px; border:1px solid #ddd; border-radius:6px; font-size:14px; text-align:center;">
+                                <span style="color:#555; font-size:13px;">minutes (whole set — not per question)</span>
+                            </div>
+                        </div>
+
+                        <!-- AI JSON Paste -->
+                        <div id="mcq-ai-${id}" style="display:none;">
+                            <label style="font-size:13px; font-weight:600; display:block; margin-bottom:8px;">Paste JSON from AI:</label>
+                            <textarea name="topic_mcq_json_${id}" rows="9" style="width:100%; font-family:monospace; font-size:12px; border:1px solid #c7d4ff; border-radius:6px; padding:10px; box-sizing:border-box; background:#fff;" placeholder='[\n  {\n    "question": "Which country hosted QUAD Summit 2025?",\n    "options": ["India", "USA", "Japan", "Australia"],\n    "correct": 0\n  }\n]\n\nTell AI: Give me 10 MCQs on [topic] in JSON with: question, options[], correct (0-based index)'></textarea>
+                            <p style="font-size:11px; color:#888; margin-top:5px;">💡 correct=0 means first option is correct, correct=1 means second option, etc.</p>
+                        </div>
+
+                        <!-- Manual MCQ Builder -->
+                        <div id="mcq-manual-${id}" style="display:none;">
+                            <div id="manual-questions-${id}" style="display:flex; flex-direction:column; gap:12px;"></div>
+                            <button type="button" onclick="addManualQuestion(${id})" style="margin-top:12px; padding:9px 18px; background:white; border:1px solid #3a4aad; border-radius:6px; cursor:pointer; font-size:13px; color:#3a4aad; font-weight:500;">+ Add Question</button>
+                            <input type="hidden" name="topic_mcq_manual_json_${id}" id="manual-json-${id}">
+                        </div>
+                    </div>
+                    <!-- ===== END MCQ SECTION ===== -->
                 </div>
             `;
             container.appendChild(box);
+        }
+
+        function toggleMcqMode(id) {
+            const mode = document.querySelector(`input[name="topic_mcq_mode_${id}"]:checked`).value;
+            document.getElementById(`mcq-timer-${id}`).style.display = (mode !== 'none') ? 'block' : 'none';
+            document.getElementById(`mcq-ai-${id}`).style.display   = (mode === 'ai')     ? 'block' : 'none';
+            document.getElementById(`mcq-manual-${id}`).style.display = (mode === 'manual') ? 'block' : 'none';
+        }
+
+        function addManualQuestion(topicId) {
+            if (!manualQCounters[topicId]) manualQCounters[topicId] = 0;
+            const qid = manualQCounters[topicId]++;
+            const container = document.getElementById(`manual-questions-${topicId}`);
+            const qDiv = document.createElement('div');
+            qDiv.id = `manual-q-${topicId}-${qid}`;
+            qDiv.style.cssText = 'background:white; padding:15px; border-radius:8px; border:1px solid #ddd;';
+            qDiv.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <strong style="font-size:13px; color:#333;">Question ${qid + 1}</strong>
+                    <button type="button" onclick="document.getElementById('manual-q-${topicId}-${qid}').remove()" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:12px;">✕ Remove</button>
+                </div>
+                <input type="text" id="mq-text-${topicId}-${qid}" placeholder="Enter question text..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; margin-bottom:12px; font-size:13px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <label style="font-size:12px; font-weight:600; color:#555;">Answer Options:</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:12px; color:#666;">Number of options:</label>
+                        <select onchange="setOptionCount(${topicId}, ${qid}, this.value)" style="padding:5px 8px; border:1px solid #ddd; border-radius:4px; font-size:13px;">
+                            <option value="2">2</option><option value="3">3</option><option value="4" selected>4</option>
+                            <option value="5">5</option><option value="6">6</option><option value="7">7</option>
+                            <option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="options-container-${topicId}-${qid}"></div>
+            `;
+            container.appendChild(qDiv);
+            setOptionCount(topicId, qid, 4);
+        }
+
+        function setOptionCount(topicId, qid, count) {
+            const container = document.getElementById(`options-container-${topicId}-${qid}`);
+            const existingVals = {};
+            container.querySelectorAll('input[type="text"]').forEach((inp, i) => { existingVals[i] = inp.value; });
+            let currentCorrect = 0;
+            const checked = container.querySelector('input[type="radio"]:checked');
+            if (checked) currentCorrect = parseInt(checked.value);
+            container.innerHTML = '';
+            for (let i = 0; i < parseInt(count); i++) {
+                const lbl = String.fromCharCode(65 + i);
+                const d = document.createElement('div');
+                d.style.cssText = 'display:flex; align-items:center; gap:10px; margin-bottom:8px;';
+                d.innerHTML = `
+                    <span style="font-weight:700; min-width:20px; color:#3a4aad; font-size:13px;">${lbl}</span>
+                    <input type="text" id="mopt-${topicId}-${qid}-${i}" placeholder="Option ${lbl}..." value="${existingVals[i]||''}" style="flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:13px;">
+                    <label style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; white-space:nowrap; color:#2e7d32; font-weight:500;">
+                        <input type="radio" name="mcorrect-${topicId}-${qid}" value="${i}" ${i===currentCorrect?'checked':''}> ✓ Correct
+                    </label>`;
+                container.appendChild(d);
+            }
+        }
+
+        function serializeManualMcqs(topicId) {
+            const container = document.getElementById(`manual-questions-${topicId}`);
+            if (!container) return '[]';
+            const questions = [];
+            container.querySelectorAll('[id^="manual-q-"]').forEach(qDiv => {
+                const parts = qDiv.id.replace(`manual-q-${topicId}-`, '');
+                const qid = parts;
+                const txtInput = document.getElementById(`mq-text-${topicId}-${qid}`);
+                if (!txtInput || !txtInput.value.trim()) return;
+                const opts = [];
+                let correctIdx = 0;
+                const optContainer = document.getElementById(`options-container-${topicId}-${qid}`);
+                if (optContainer) {
+                    optContainer.querySelectorAll('input[type="text"]').forEach(inp => opts.push(inp.value.trim()));
+                    const cr = optContainer.querySelector('input[type="radio"]:checked');
+                    if (cr) correctIdx = parseInt(cr.value);
+                }
+                questions.push({ question: txtInput.value.trim(), options: opts, correct: correctIdx });
+            });
+            return JSON.stringify(questions);
         }
 
         // Handle Syllabus Form AJAX with Progress
@@ -1294,53 +1413,51 @@
                 e.preventDefault();
 
                 // Validation for Individual Mode
-                const mode = document.querySelector('input[name="target_audience"]:checked').value;
-                if (mode === 'individual') {
+                const audience = document.querySelector('input[name="target_audience"]:checked').value;
+                if (audience === 'individual') {
                     const userId = document.getElementById('selected-user-id').value;
-                    if (!userId) {
-                        alert('Please search and select a user for Individual Syllabus.');
-                        return;
+                    if (!userId) { alert('Please search and select a user for Individual Syllabus.'); return; }
+                }
+
+                // Serialize all manual MCQ builders into hidden fields before FormData capture
+                for (let t = 0; t < topicCounter; t++) {
+                    const modeEl = document.querySelector(`input[name="topic_mcq_mode_${t}"]:checked`);
+                    if (modeEl && modeEl.value === 'manual') {
+                        const hiddenField = document.getElementById(`manual-json-${t}`);
+                        if (hiddenField) hiddenField.value = serializeManualMcqs(t);
                     }
                 }
 
                 const formData = new FormData(this);
                 const xhr = new XMLHttpRequest();
-
                 const overlay = document.getElementById('upload-overlay');
                 const bar = document.getElementById('upload-progress-bar');
                 const text = document.getElementById('upload-progress-text');
-
                 overlay.style.display = 'flex';
 
                 xhr.upload.addEventListener('progress', function (e) {
                     if (e.lengthComputable) {
-                        const percent = (e.loaded / e.total) * 100;
-                        bar.style.width = percent + '%';
-                        text.textContent = Math.round(percent) + '%';
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        bar.style.width = pct + '%';
+                        text.textContent = pct + '%';
                     }
                 });
 
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4) {
                         if (xhr.status === 200 || xhr.status === 302) {
-                            // Success - Redirect
                             window.location.reload();
                         } else {
                             try {
-                                const response = JSON.parse(xhr.responseText);
-                                if (response.traceback) {
-                                    alert('Upload failed due to Server Error:\n\n' + response.error + '\n\n' + response.traceback.substring(0, 500) + '...');
-                                } else {
-                                    alert('Upload failed: ' + (response.error || 'Please try again.'));
-                                }
-                            } catch(e) {
+                                const resp = JSON.parse(xhr.responseText);
+                                alert('Upload failed: ' + (resp.error || 'Please try again.') + (resp.traceback ? '\n\n' + resp.traceback.substring(0,400) : ''));
+                            } catch(err) {
                                 alert('Upload failed. Server returned status: ' + xhr.status);
                             }
                             overlay.style.display = 'none';
                         }
                     }
                 };
-
                 xhr.open('POST', window.location.href, true);
                 xhr.send(formData);
             };

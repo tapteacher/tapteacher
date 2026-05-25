@@ -181,6 +181,139 @@ class GuidanceTopicFile(models.Model):
     def __str__(self):
         return f"{self.file_type.upper()} for {self.topic.title}"
 
+
+# ─────────────────────────────────────────
+#  MCQ System Models
+# ─────────────────────────────────────────
+
+class MCQSet(models.Model):
+    """One MCQ set per GuidanceTopic. Admin sets the total timer."""
+    topic = models.OneToOneField(
+        GuidanceTopic, on_delete=models.CASCADE, related_name='mcq_set'
+    )
+    title = models.CharField(max_length=200, blank=True, help_text="Optional title for this MCQ set")
+    time_limit_minutes = models.PositiveIntegerField(
+        default=10,
+        help_text="Total time allowed for entire MCQ set (in minutes)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def question_count(self):
+        return self.questions.count()
+
+    def __str__(self):
+        return f"MCQ Set — {self.topic.title} ({self.question_count()} Qs, {self.time_limit_minutes} min)"
+
+
+class MCQ(models.Model):
+    """A single MCQ question belonging to an MCQSet."""
+    mcq_set = models.ForeignKey(MCQSet, on_delete=models.CASCADE, related_name='questions')
+    question_text = models.TextField()
+    order = models.PositiveIntegerField(default=0, help_text="Display order of this question")
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"Q{self.order}: {self.question_text[:60]}"
+
+
+class MCQOption(models.Model):
+    """One answer option for an MCQ. Up to 10 options (A–J)."""
+    LABEL_CHOICES = [(chr(65 + i), chr(65 + i)) for i in range(10)]  # A through J
+
+    mcq = models.ForeignKey(MCQ, on_delete=models.CASCADE, related_name='options')
+    label = models.CharField(max_length=1, choices=LABEL_CHOICES)  # A, B, C...
+    option_text = models.TextField()
+    is_correct = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['label']
+
+    def __str__(self):
+        correct_mark = " ✓" if self.is_correct else ""
+        return f"{self.label}: {self.option_text[:40]}{correct_mark}"
+
+
+class MCQAttempt(models.Model):
+    """Records one full attempt by a user on an MCQSet. Latest attempt = current score."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mcq_attempts')
+    mcq_set = models.ForeignKey(MCQSet, on_delete=models.CASCADE, related_name='attempts')
+    attempted_at = models.DateTimeField(auto_now_add=True)
+    total_questions = models.PositiveIntegerField(default=0)
+    correct_count = models.PositiveIntegerField(default=0)
+    wrong_count = models.PositiveIntegerField(default=0)
+    skipped_count = models.PositiveIntegerField(default=0)
+    time_taken_seconds = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-attempted_at']
+
+    def score_percentage(self):
+        if self.total_questions == 0:
+            return 0
+        return round((self.correct_count / self.total_questions) * 100, 1)
+
+    @property
+    def formatted_time_taken(self):
+        """Returns time_taken_seconds as a human-readable string, e.g. '4m 32s'"""
+        secs = self.time_taken_seconds or 0
+        mins = secs // 60
+        remaining_secs = secs % 60
+        if mins > 0:
+            return f"{mins}m {remaining_secs}s"
+        return f"{remaining_secs}s"
+
+    def __str__(self):
+        return (
+            f"{self.user.username} — {self.mcq_set.topic.title} "
+            f"({self.correct_count}/{self.total_questions}) @ {self.attempted_at.strftime('%d %b %Y')}"
+        )
+
+
+class MCQAttemptAnswer(models.Model):
+    """Records the user's answer for each question within an MCQAttempt."""
+    attempt = models.ForeignKey(MCQAttempt, on_delete=models.CASCADE, related_name='answers')
+    mcq = models.ForeignKey(MCQ, on_delete=models.CASCADE, related_name='attempt_answers')
+    selected_option = models.ForeignKey(
+        MCQOption, on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="NULL means user skipped this question"
+    )
+    is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        status = "✓" if self.is_correct else ("–" if self.selected_option is None else "✗")
+        return f"{status} Q{self.mcq.order} in Attempt #{self.attempt.id}"
+
+
+class UserTopicNotes(models.Model):
+    """Personal notes a user keeps for a GuidanceTopic. Max 5MB of text."""
+    MAX_NOTES_BYTES = 5 * 1024 * 1024  # 5 MB
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='topic_notes')
+    topic = models.ForeignKey(GuidanceTopic, on_delete=models.CASCADE, related_name='user_notes')
+    notes_text = models.TextField(blank=True, default='')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'topic']
+
+    def notes_size_bytes(self):
+        return len(self.notes_text.encode('utf-8'))
+
+    def notes_size_kb(self):
+        return round(self.notes_size_bytes() / 1024, 1)
+
+    def is_near_limit(self):
+        return self.notes_size_bytes() > (self.MAX_NOTES_BYTES * 0.9)  # 90% full
+
+    def __str__(self):
+        return f"Notes by {self.user.username} for '{self.topic.title}' ({self.notes_size_kb()} KB)"
+
+
+# ─────────────────────────────────────────
+
 class UserVerification(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='verification')
     full_name = models.CharField(max_length=255, blank=True)
