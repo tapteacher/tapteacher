@@ -698,7 +698,8 @@
             })
             .then(data => {
                 if (data.success) {
-                    showResultsScreen(data);
+                    const reviewUrl = `{% url 'mcq_attempt_review' category.slug subject.id topic.id 999999 %}`.replace('999999', data.attempt_id);
+                    window.location.href = reviewUrl + '?tab=wrong';
                 } else {
                     document.getElementById('nav-buttons-container').style.display = 'flex';
                     showErrorBanner('Submission error: ' + (data.message || 'Unknown error'));

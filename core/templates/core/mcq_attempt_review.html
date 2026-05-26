@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Review: {{ topic.title }} - TapTeacher</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #e0e7ff;
+            --accent: #2563eb;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 750px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Top header info panel */
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 24px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 25px;
+        }
+
+        .topic-info h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .topic-info p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 4px 0 0;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Result View Screen */
+        .result-screen {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .result-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .result-score-ring {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 25px auto;
+            border: 4px solid var(--primary);
+        }
+
+        .result-percentage {
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        .result-fraction {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .stat-box {
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-main);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-box:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-val {
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+        .stat-box.correct .stat-val { color: var(--success); }
+        .stat-box.wrong .stat-val { color: var(--danger); }
+        .stat-box.skipped .stat-val { color: var(--text-muted); }
+
+        .stat-box.correct.active {
+            border-color: var(--success);
+            background: #ecfdf5;
+            box-shadow: 0 0 0 1px var(--success);
+        }
+
+        .stat-box.wrong.active {
+            border-color: var(--danger);
+            background: #fef2f2;
+            box-shadow: 0 0 0 1px var(--danger);
+        }
+
+        .stat-box.skipped.active {
+            border-color: var(--text-muted);
+            background: #f8fafc;
+            box-shadow: 0 0 0 1px var(--text-muted);
+        }
+
+        .stat-lbl {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        /* Question Container Card */
+        .question-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 25px;
+            display: none; /* Controlled via JS */
+            text-align: left;
+        }
+
+        .question-number {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        .question-text {
+            font-family: 'Outfit', sans-serif;
+            font-size: 19px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 24px;
+            color: var(--text-main);
+        }
+
+        /* Option Options List */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--card-bg);
+            font-weight: 500;
+            font-size: 15px;
+            position: relative;
+        }
+
+        .option-item.correct-option {
+            border-color: var(--success);
+            background: var(--success-light);
+            color: #065f46;
+            font-weight: 600;
+        }
+
+        .option-item.wrong-option {
+            border-color: var(--danger);
+            background: var(--danger-light);
+            color: #991b1b;
+            font-weight: 600;
+        }
+
+        .option-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            font-weight: 700;
+            font-size: 13px;
+            background: var(--bg-main);
+            color: var(--text-muted);
+        }
+
+        .option-badge.correct-badge {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .option-badge.wrong-badge {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
+        .status-marker {
+            margin-left: auto;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .correct-marker {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .wrong-marker {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .skipped-notice {
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: #f1f5f9;
+            color: #475569;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-main);
+            border-color: var(--text-muted);
+        }
+
+        .no-questions {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 25px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        
+        <!-- Back Navigation Option -->
+        <div style="margin-bottom: 20px;">
+            <a href="{% url 'syllabus_topic_detail' category.slug subject.id topic.id %}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; padding: 8px 16px;">
+                ← Return to Topic Home
+            </a>
+        </div>
+        
+        <!-- Top bar Info -->
+        <div class="review-header">
+            <div class="topic-info">
+                <p>{{ subject.name }}</p>
+                <h1>{{ topic.title }} Review</h1>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); text-align: right; font-weight: 500;">
+                Attempted on:<br>
+                <strong style="color: var(--text-main);">{{ attempt.attempted_at|date:"d M Y, h:i A" }}</strong>
+            </div>
+        </div>
+
+        <!-- Result Card -->
+        <div class="result-screen">
+            <div class="result-title">Quiz Completed!</div>
+            <p style="color: var(--text-muted); margin: 0 0 10px 0;">Here is the breakdown of your performance details.</p>
+            
+            <div class="result-score-ring">
+                <span class="result-percentage">{{ attempt.score_percentage|floatformat:1 }}%</span>
+                <span class="result-fraction">{{ attempt.correct_count }} / {{ attempt.total_questions }} correct</span>
+            </div>
+
+            <!-- Tab Buttons styled as Statistics Boxes -->
+            <div class="stats-grid">
+                <div class="stat-box correct" id="tab-correct" onclick="switchReviewTab('correct')">
+                    <div class="stat-val">{{ attempt.correct_count }}</div>
+                    <div class="stat-lbl">Correct Answers</div>
+                </div>
+                <div class="stat-box wrong" id="tab-wrong" onclick="switchReviewTab('wrong')">
+                    <div class="stat-val">{{ attempt.wrong_count }}</div>
+                    <div class="stat-lbl">Wrong Answers</div>
+                </div>
+                <div class="stat-box skipped" id="tab-skipped" onclick="switchReviewTab('skipped')">
+                    <div class="stat-val">{{ attempt.skipped_count }}</div>
+                    <div class="stat-lbl">Skipped / Unanswered</div>
+                </div>
+            </div>
+
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 20px;">
+                ⏱️ Total Time Taken: {{ attempt.formatted_time_taken }}
+            </div>
+
+            <a href="{% url 'syllabus_topic_detail' category.slug subject.id topic.id %}" class="btn btn-primary" style="padding: 14px 28px; font-size:16px;">
+                📂 Return to Topic Home
+            </a>
+        </div>
+
+        <!-- Questions Filter Area -->
+        <div id="questions-review-area">
+            {% for answer in answers %}
+            <div class="question-card" data-status="{% if not answer.selected_option %}skipped{% elif answer.is_correct %}correct{% else %}wrong{% endif %}">
+                <div class="question-number">Question {{ forloop.counter }}</div>
+                <div class="question-text">{{ answer.mcq.question_text }}</div>
+                
+                <div class="options-list">
+                    {% for opt in answer.mcq.options.all %}
+                        <div class="option-item 
+                            {% if opt.is_correct %}correct-option{% elif answer.selected_option and answer.selected_option.id == opt.id %}wrong-option{% endif %}">
+                            <span class="option-badge 
+                                {% if opt.is_correct %}correct-badge{% elif answer.selected_option and answer.selected_option.id == opt.id %}wrong-badge{% endif %}">
+                                {{ opt.label }}
+                            </span>
+                            <span>{{ opt.option_text }}</span>
+                            
+                            {% if opt.is_correct %}
+                                <span class="status-marker correct-marker">✓ Correct</span>
+                            {% elif answer.selected_option and answer.selected_option.id == opt.id %}
+                                <span class="status-marker wrong-marker">✗ Your Choice</span>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                {% if not answer.selected_option %}
+                    <div class="skipped-notice">
+                        <span>⚠️</span> You skipped this question. The correct answer is shown above.
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <!-- Dynamic empty state placeholder -->
+            <div class="no-questions" id="no-questions-msg" style="display: none;">
+                <div style="font-size: 40px; margin-bottom: 10px;">✨</div>
+                <div class="msg-text" style="font-size: 15px; font-weight: 600; color: var(--text-muted);">
+                    No questions in this category.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchReviewTab(status) {
+            // Remove active style from tabs
+            document.querySelectorAll('.stat-box').forEach(box => {
+                box.classList.remove('active');
+            });
+            
+            // Add active style to selected tab
+            const activeTab = document.getElementById('tab-' + status);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+            
+            // Show/Hide questions matching the status
+            let matchCount = 0;
+            document.querySelectorAll('.question-card').forEach(card => {
+                if (card.getAttribute('data-status') === status) {
+                    card.style.display = 'block';
+                    matchCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Show dynamic empty state placeholder
+            const noQuestionsMessage = document.getElementById('no-questions-msg');
+            if (matchCount === 0) {
+                let msg = '';
+                if (status === 'correct') {
+                    msg = "No correct answers in this attempt. Keep studying!";
+                } else if (status === 'wrong') {
+                    msg = "No mistakes! Excellent job on a perfect score! 🎉";
+                } else if (status === 'skipped') {
+                    msg = "You didn't skip any questions!";
+                }
+                noQuestionsMessage.querySelector('.msg-text').textContent = msg;
+                noQuestionsMessage.style.display = 'block';
+            } else {
+                noQuestionsMessage.style.display = 'none';
+            }
+        }
+
+        // Initialize display using query param, fallback to active tab or 'wrong'
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            let tab = urlParams.get('tab') || '{{ initial_tab }}';
+            
+            // Validate tab
+            if (tab !== 'correct' && tab !== 'wrong' && tab !== 'skipped') {
+                tab = 'wrong';
+            }
+            
+            // Special fallback: if they got 100% correct, show correct tab instead of wrong
+            const wrongCount = parseInt("{{ attempt.wrong_count }}");
+            const correctCount = parseInt("{{ attempt.correct_count }}");
+            const skippedCount = parseInt("{{ attempt.skipped_count }}");
+            
+            if (tab === 'wrong' && wrongCount === 0) {
+                if (correctCount > 0) {
+                    tab = 'correct';
+                } else if (skippedCount > 0) {
+                    tab = 'skipped';
+                }
+            }
+            
+            switchReviewTab(tab);
+        });
+    </script>
+</body>
+
+</html>

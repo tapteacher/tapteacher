@@ -682,11 +682,22 @@ def admin_dashboard(request):
                         defaults={'name': category_name}
                     )
                     
-                    # Find or Create Subject
-                    subject, _ = GuidanceSubject.objects.get_or_create(
-                        category=category, 
-                        name=subject_name
-                    )
+                    # Find or Create Subject (Case and whitespace insensitive)
+                    subject_name_clean = subject_name.strip()
+                    norm_target = "".join(subject_name_clean.split()).lower()
+                    
+                    existing_subjects = GuidanceSubject.objects.filter(category=category)
+                    subject = None
+                    for sub in existing_subjects:
+                        if "".join(sub.name.split()).lower() == norm_target:
+                            subject = sub
+                            break
+                    
+                    if not subject:
+                        subject = GuidanceSubject.objects.create(
+                            category=category,
+                            name=subject_name_clean
+                        )
                     
                     # Handle Topics
                     topic_limit = int(request.POST.get('topic_count', 0))
@@ -1963,6 +1974,64 @@ def edit_topic_inline(request, topic_id):
     return redirect(url)
 
 
+@login_required(login_url='login_view')
+def edit_subject_inline(request, subject_id):
+    """Enables inline editing of a GuidanceSubject name, with automatic merging if the new name already exists."""
+    if not request.user.is_superuser:
+        return redirect('home')
+        
+    from .models import GuidanceSubject
+    from django.contrib import messages
+    from django.shortcuts import get_object_or_404, redirect
+    
+    subject = get_object_or_404(GuidanceSubject, id=subject_id)
+    category = subject.category
+    
+    if request.method == 'POST':
+        new_name = request.POST.get('subject_name', '').strip()
+        
+        if not new_name:
+            messages.error(request, 'Subject name cannot be empty.')
+            return redirect('syllabus_subject', category_slug=category.slug, subject_id=subject.id)
+            
+        norm_target = "".join(new_name.split()).lower()
+        norm_current = "".join(subject.name.split()).lower()
+        
+        # If name is actually changed (casing, spaces, or spelling)
+        if norm_target != norm_current:
+            # Check for existing matching subject
+            existing_subjects = GuidanceSubject.objects.filter(category=category).exclude(id=subject.id)
+            target_sub = None
+            for sub in existing_subjects:
+                if "".join(sub.name.split()).lower() == norm_target:
+                    target_sub = sub
+                    break
+            
+            if target_sub:
+                # Merge topics under the existing subject
+                topics = subject.topics.all()
+                topic_count = topics.count()
+                for topic in topics:
+                    topic.subject = target_sub
+                    topic.save()
+                
+                # Delete the old empty subject
+                subject.delete()
+                
+                messages.success(
+                    request, 
+                    f"Subject merged successfully! '{new_name}' already exists, so all {topic_count} topics were aligned under it."
+                )
+                return redirect('syllabus_subject', category_slug=category.slug, subject_id=target_sub.id)
+        
+        # Simple name change or casing update
+        subject.name = new_name
+        subject.save()
+        messages.success(request, 'Subject name updated successfully.')
+        
+    return redirect('syllabus_subject', category_slug=category.slug, subject_id=subject.id)
+
+
 @csrf_exempt
 @login_required(login_url='login_view')
 def delete_topic_file(request, file_id):
@@ -2249,4 +2318,31 @@ def syllabus_topic_notes_save_view(request, topic_id):
     return JsonResponse({
         'success': True,
         'size_kb': notes_obj.notes_size_kb()
+    })
+
+
+@login_required(login_url='login_view')
+def mcq_attempt_review_view(request, category_slug, subject_id, topic_id, attempt_id):
+    """Renders the detailed question-by-question review of a saved MCQ attempt."""
+    from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, MCQSet, MCQAttempt
+    from django.shortcuts import get_object_or_404, render, redirect
+    
+    category = get_object_or_404(GuidanceCategory, slug=category_slug)
+    subject = get_object_or_404(GuidanceSubject, id=subject_id, category=category)
+    topic = get_object_or_404(GuidanceTopic, id=topic_id, subject=subject)
+    attempt = get_object_or_404(MCQAttempt, id=attempt_id)
+    
+    # Ensure standard user can only review their own attempt (superusers can view all)
+    if not request.user.is_superuser and attempt.user != request.user:
+        return redirect('home')
+        
+    answers = attempt.answers.all().select_related('mcq').prefetch_related('mcq__options')
+    
+    return render(request, 'core/mcq_attempt_review.html', {
+        'category': category,
+        'subject': subject,
+        'topic': topic,
+        'attempt': attempt,
+        'answers': answers,
+        'initial_tab': request.GET.get('tab', 'wrong'),
     })

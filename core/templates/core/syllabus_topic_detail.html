@@ -681,18 +681,24 @@
                 <div class="score-card">
                     <div class="score-title">Your Latest Attempt ({{ latest_attempt.attempted_at|date:"d M Y, h:i A" }})</div>
                     <div class="score-stats">
-                        <div>
-                            <div class="stat-val correct">{{ latest_attempt.correct_count }}</div>
-                            <div class="stat-lbl">Correct</div>
-                        </div>
-                        <div>
-                            <div class="stat-val wrong">{{ latest_attempt.wrong_count }}</div>
-                            <div class="stat-lbl">Wrong</div>
-                        </div>
-                        <div>
-                            <div class="stat-val skipped">{{ latest_attempt.skipped_count }}</div>
-                            <div class="stat-lbl">Skipped</div>
-                        </div>
+                        <a href="{% url 'mcq_attempt_review' category.slug subject.id topic.id latest_attempt.id %}?tab=correct" style="text-decoration: none; display: block; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            <div>
+                                <div class="stat-val correct">{{ latest_attempt.correct_count }}</div>
+                                <div class="stat-lbl">Correct</div>
+                            </div>
+                        </a>
+                        <a href="{% url 'mcq_attempt_review' category.slug subject.id topic.id latest_attempt.id %}?tab=wrong" style="text-decoration: none; display: block; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            <div>
+                                <div class="stat-val wrong">{{ latest_attempt.wrong_count }}</div>
+                                <div class="stat-lbl">Wrong</div>
+                            </div>
+                        </a>
+                        <a href="{% url 'mcq_attempt_review' category.slug subject.id topic.id latest_attempt.id %}?tab=skipped" style="text-decoration: none; display: block; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            <div>
+                                <div class="stat-val skipped">{{ latest_attempt.skipped_count }}</div>
+                                <div class="stat-lbl">Skipped</div>
+                            </div>
+                        </a>
                     </div>
                     <div style="margin-top: 15px; text-align: center; font-size: 14px; font-weight: 600; color: var(--text-main);">
                         Total Score: {{ latest_attempt.score_percentage|floatformat:1 }}% &bull; Time Taken: {{ latest_attempt.formatted_time_taken }}

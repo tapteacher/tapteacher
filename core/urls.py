@@ -26,6 +26,7 @@ urlpatterns = [
     path('guidance/<slug:category_slug>/subject/<int:subject_id>/', views.syllabus_subject_view, name='syllabus_subject'),
     path('guidance/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/', views.syllabus_topic_detail_view, name='syllabus_topic_detail'),
     path('edit_topic_inline/<int:topic_id>/', views.edit_topic_inline, name='edit_topic_inline'),
+    path('edit_subject_inline/<int:subject_id>/', views.edit_subject_inline, name='edit_subject_inline'),
     
     # New Edit Page Routes
     path('syllabus/category/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/edit/', 
@@ -54,4 +55,5 @@ urlpatterns = [
     path('guidance/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/mcq/', views.syllabus_topic_mcq_view, name='syllabus_topic_mcq'),
     path('guidance/topic/<int:topic_id>/mcq/submit/', views.syllabus_topic_mcq_submit_view, name='syllabus_topic_mcq_submit'),
     path('guidance/topic/<int:topic_id>/notes/save/', views.syllabus_topic_notes_save_view, name='syllabus_topic_notes_save'),
+    path('guidance/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/mcq/attempt/<int:attempt_id>/review/', views.mcq_attempt_review_view, name='mcq_attempt_review'),
 ]
