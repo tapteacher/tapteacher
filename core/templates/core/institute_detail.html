@@ -45,7 +45,7 @@
     {% if selected_type %}
     <!-- Subject List View -->
     <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="font-size: 20px; font-weight: 700; text-transform: uppercase;">{{ selected_type }} Subjects</h2>
+        <h2 style="font-size: 20px; font-weight: 700; text-transform: uppercase;">{{ selected_type_display }} Subjects</h2>
         <a href="?category={{ current_category }}" class="hover-darken"
             style="padding: 8px 16px; border: 1px solid #ddd; background: #fff; border-radius: 4px; font-size: 13px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: #333;">
             <span>&#8592;</span> Back to Vacancy Types
@@ -56,9 +56,9 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
             {% for subject in subjects %}
             <a class="subject-block"
-                href="{% url 'vacancy_detail_view' state_name=state_name district_name=district_name institute_name=institute_name subject_name=subject %}?category={{ current_category }}&type={{ selected_type }}"
+                href="{% url 'vacancy_detail_view' state_name=state_name district_name=district_name institute_name=institute_name subject_name=subject.raw %}?category={{ current_category }}&type={{ selected_type }}"
                 style="text-decoration: none; color: inherit;">
-                {{ subject }}
+                {{ subject.display }}
             </a>
             {% endfor %}
         </div>
@@ -67,28 +67,14 @@
     {% else %}
     <!-- Vacancy Category Buttons -->
     <div style="display: flex; gap: 15px; justify-content: flex-start; flex-wrap: wrap; margin-top: 20px;">
-        {% if prt_list %}
-        <button class="vacancy-type-btn" onclick="window.location.href='?category={{ current_category }}&type=prt'">PRT
-            Vacancy</button>
-        {% endif %}
-
-        {% if tgt_list %}
-        <button class="vacancy-type-btn" onclick="window.location.href='?category={{ current_category }}&type=tgt'">TGT
-            Vacancy</button>
-        {% endif %}
-
-        {% if pgt_list %}
-        <button class="vacancy-type-btn" onclick="window.location.href='?category={{ current_category }}&type=pgt'">PGT
-            Vacancy</button>
-        {% endif %}
-
-        {% if other_list %}
-        <button class="vacancy-type-btn"
-            onclick="window.location.href='?category={{ current_category }}&type=other'">Other Vacancy</button>
-        {% endif %}
+        {% for cat in categories %}
+        <button class="vacancy-type-btn" onclick="window.location.href='?category={{ current_category }}&type={{ cat.slug }}'">
+            {{ cat.display_name }} Vacancy
+        </button>
+        {% endfor %}
     </div>
 
-    {% if not prt_list and not tgt_list and not pgt_list and not other_list %}
+    {% if not categories %}
     <div
         style="text-align: center; padding: 50px; background: white; border: 1px solid #eee; border-radius: 8px; color: #666; margin-top: 20px;">
         No active vacancies found for this institute at the moment.

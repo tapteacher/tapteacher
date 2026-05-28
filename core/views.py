@@ -209,6 +209,14 @@ def institute_view(request, state_name, district_name, institute_name):
         district=district_name.strip()
     ).first()
 
+    category_titles = {
+        'govt': 'Government School',
+        'semi': 'Semi-Government School',
+        'private': 'Private School',
+        'coaching': 'Private Coaching & Tuition'
+    }
+    category_title = category_titles.get(category, 'Other')
+
     if not institute:
         # Fallback
         belief = "Our mission is to provide quality education and foster a learning environment that empowers students to achieve their full potential."
@@ -216,7 +224,9 @@ def institute_view(request, state_name, district_name, institute_name):
         tgt_list = []
         pgt_list = []
         other_list = []
+        categories = []
         subjects = []
+        selected_type_display = ""
     else:
         belief = institute.belief or "No belief statement provided."
         # Get latest vacancy for this institute that is active
@@ -229,7 +239,9 @@ def institute_view(request, state_name, district_name, institute_name):
         tgt_list = []
         pgt_list = []
         other_list = []
+        categories = []
         subjects = []
+        selected_type_display = ""
 
         if latest_vacancy:
             # Group posts
@@ -255,32 +267,77 @@ def institute_view(request, state_name, district_name, institute_name):
                 elif p.category == 'tgt': tgt_list.append(item)
                 elif p.category == 'pgt': pgt_list.append(item)
                 else: other_list.append(item)
+
+            # Dynamic unique categories present in the active posts
+            active_posts = posts if is_hr_tester else posts.exclude(id__in=excluded_post_ids)
+            seen_categories = {}
+            for p in active_posts:
+                cat_slug = p.category.strip().lower()
+                if cat_slug not in seen_categories:
+                    # Format display name beautifully
+                    words = cat_slug.split()
+                    formatted_words = []
+                    for word in words:
+                        if word in ['upsc', 'ntt', 'pgt', 'tgt', 'prt', 'ctet', 'b.ed', 'dsssb', 'cbse', 'icse', 'ib']:
+                            formatted_words.append(word.upper())
+                        else:
+                            formatted_words.append(word.capitalize())
+                    display_name = " ".join(formatted_words)
+                    
+                    seen_categories[cat_slug] = {
+                        'slug': cat_slug,
+                        'display_name': display_name,
+                    }
+            categories = list(seen_categories.values())
             
             # If a specific type is selected, filter subjects for that type
             if vacancy_type:
+                # Format selected_type_display beautifully
+                words = vacancy_type.strip().split()
+                formatted_words = []
+                for word in words:
+                    if word.lower() in ['upsc', 'ntt', 'pgt', 'tgt', 'prt', 'ctet', 'b.ed', 'dsssb', 'cbse', 'icse', 'ib']:
+                        formatted_words.append(word.upper())
+                    else:
+                        formatted_words.append(word.capitalize())
+                selected_type_display = " ".join(formatted_words)
+
                 # We need to re-filter specifically for the selected type's subjects list
-                filtered_posts = posts.filter(category=vacancy_type).exclude(id__in=excluded_post_ids)
-                subjects = [p.subject for p in filtered_posts]
+                filtered_posts = active_posts.filter(category=vacancy_type.strip().lower())
+                seen_subjects = set()
+                for fp in filtered_posts:
+                    sub_clean = fp.subject.strip()
+                    # Format subject display beautifully
+                    sub_words = sub_clean.split()
+                    formatted_sub_words = []
+                    for word in sub_words:
+                        if word.lower() in ['upsc', 'ntt', 'pgt', 'tgt', 'prt', 'gk', 'gs', 'ssc', 'net', 'csir', 'gate', 'cat', 'clat', 'iit', 'jee', 'neet']:
+                            formatted_sub_words.append(word.upper())
+                        else:
+                            formatted_sub_words.append(word.capitalize())
+                    sub_display = " ".join(formatted_sub_words)
+                    
+                    if sub_display.lower() not in seen_subjects:
+                        seen_subjects.add(sub_display.lower())
+                        subjects.append({
+                            'raw': sub_clean,
+                            'display': sub_display
+                        })
                 
-    # New: if user is viewing specific type, pass mailto links for subjects?
-    # Actually, institute_view lists subjects. The "Apply" usually happens on vacancy_detail or some apply action.
-    # But if there are "Apply" buttons next to subjects in the list (if that's the UI):
-    # The UI currently seems to just list subjects.
-    # Let's assume standard flow goes to vacancy_detail_view for a specific post.
-    # However, if we want to pass a generic mailto for the institute?
-    # The user said "when user applied in the vacancy of tgt physics".
-    
     return render(request, 'core/institute_detail.html', {
         'state_name': state_name,
         'district_name': district_name,
         'institute_name': institute_name,
         'current_category': category,
+        'category_title': category_title,
         'belief': belief,
         'prt_list': prt_list,
         'tgt_list': tgt_list,
         'pgt_list': pgt_list,
         'other_list': other_list,
+        'categories': categories,
         'selected_type': vacancy_type,
+        'selected_type_display': selected_type_display,
         'subjects': subjects,
         'images': institute.images.all() if institute else []
     })
