@@ -169,6 +169,9 @@ class GuidanceTopic(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created_at', '-id']
+
     def __str__(self):
         return f"{self.title} - {self.subject}"
 
@@ -310,6 +313,39 @@ class UserTopicNotes(models.Model):
 
     def __str__(self):
         return f"Notes by {self.user.username} for '{self.topic.title}' ({self.notes_size_kb()} KB)"
+
+class AnswerWritingQuestion(models.Model):
+    topic = models.ForeignKey(GuidanceTopic, on_delete=models.CASCADE, related_name='answer_writing_questions')
+    question_text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Q for {self.topic.title}: {self.question_text[:50]}"
+
+class AnswerWritingSubmission(models.Model):
+    question = models.ForeignKey(AnswerWritingQuestion, on_delete=models.CASCADE, related_name='submissions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='answer_submissions')
+    submitted_file = models.FileField(upload_to='answer_writing/submissions/', storage=get_raw_storage)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    # Admin remarks
+    remark_text = models.TextField(blank=True, null=True)
+    remark_file = models.FileField(upload_to='answer_writing/remarks/', storage=get_raw_storage, blank=True, null=True)
+    remarked_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ['question', 'user']
+
+    def __str__(self):
+        return f"Sub by {self.user.username} for Q {self.question.id}"
+
+class SentEmailLog(models.Model):
+    sent_at = models.DateTimeField(auto_now_add=True)
+    email_type = models.CharField(max_length=50)  # 'vacancy' or 'answer_writing'
+    recipient = models.EmailField()
+
+    def __str__(self):
+        return f"{self.email_type} to {self.recipient} at {self.sent_at}"
 
 
 # ─────────────────────────────────────────
@@ -467,3 +503,17 @@ class AdminRole(models.Model):
 
     def __str__(self):
         return f"Roles for {self.user.email}"
+
+
+class MaterialEngagement(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='material_engagements')
+    topic = models.ForeignKey(GuidanceTopic, on_delete=models.CASCADE, related_name='material_engagements')
+    pdf_open_count = models.PositiveIntegerField(default=0)
+    link_click_count = models.PositiveIntegerField(default=0)
+    last_accessed = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'topic']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.topic.title} (PDFs: {self.pdf_open_count}, Links: {self.link_click_count})"

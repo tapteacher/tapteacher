@@ -1320,6 +1320,18 @@
                         </div>
                     </div>
                     <!-- ===== END MCQ SECTION ===== -->
+
+                    <!-- ===== ANSWER WRITING QUESTIONS SECTION ===== -->
+                    <div style="background:#fdf4ff; padding:16px; border-radius:8px; border:1px solid #fbcfe8; margin-top:15px;">
+                        <div style="font-weight:600; margin-bottom:12px; color:#9d174d; font-size:14px;">📝 Questions for Answer Writing <span style="font-weight:400; font-size:12px; color:#888;">(Optional)</span></div>
+                        <div id="answer-questions-container-${id}" style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="text" name="topic_answer_questions_${id}[]" placeholder="Enter answer writing question..." style="flex:1; padding:10px; border:1px solid #fbcfe8; border-radius:6px; font-size:13px; box-sizing:border-box;">
+                                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:14px; padding:5px;" title="Remove Question">✕</button>
+                            </div>
+                        </div>
+                        <button type="button" onclick="addAnswerQuestionField(${id})" style="margin-top:12px; padding:8px 16px; background:white; border:1px solid #9d174d; border-radius:6px; cursor:pointer; font-size:13px; color:#9d174d; font-weight:600; transition: all 0.2s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">+ Add Question</button>
+                    </div>
                 </div>
             `;
             container.appendChild(box);
@@ -1330,6 +1342,18 @@
             document.getElementById(`mcq-timer-${id}`).style.display = (mode !== 'none') ? 'block' : 'none';
             document.getElementById(`mcq-ai-${id}`).style.display   = (mode === 'ai')     ? 'block' : 'none';
             document.getElementById(`mcq-manual-${id}`).style.display = (mode === 'manual') ? 'block' : 'none';
+        }
+
+        function addAnswerQuestionField(topicId) {
+            const container = document.getElementById(`answer-questions-container-${topicId}`);
+            if (!container) return;
+            const qDiv = document.createElement('div');
+            qDiv.style.cssText = 'display:flex; gap:10px; align-items:center;';
+            qDiv.innerHTML = `
+                <input type="text" name="topic_answer_questions_${topicId}[]" placeholder="Enter answer writing question..." style="flex:1; padding:10px; border:1px solid #fbcfe8; border-radius:6px; font-size:13px; box-sizing:border-box;">
+                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:14px; padding:5px;" title="Remove Question">✕</button>
+            `;
+            container.appendChild(qDiv);
         }
 
         function addManualQuestion(topicId) {

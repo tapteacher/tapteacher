@@ -5,6 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ category.name }} Subjects - TapTeacher</title>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            alert("JavaScript Error detected:\n\n" + message + "\n\nFile: " + source + "\nLine: " + lineno);
+            return false;
+        };
+    </script>
     <style>
         body {
             margin: 0;
@@ -91,10 +97,136 @@
             box-shadow: 0 4px 8px rgba(239,68,68,0.3);
         }
 
+        .btn-edit-cat {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-edit-cat:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+        }
+
         .empty-state {
             text-align: center;
             color: #888;
             padding: 50px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.4); 
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 10px;
+        }
+
+        .modal-content p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .modal-input:focus {
+            border-color: #4f46e5;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .cancel-btn {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .cancel-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .submit-btn {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            background: #4338ca;
         }
     </style>
 </head>
@@ -105,9 +237,10 @@
             <h1>{{ category.name }} Subjects Syllabus</h1>
             <div style="display:flex; gap:10px; align-items:center;">
                 {% if request.user.is_superuser %}
-                <a href="{% url 'delete_category' category.id %}" class="btn-delete-cat">🗑️ Delete Category</a>
+                <button id="edit-category-btn" data-id="{{ category.id }}" data-name="{{ category.name }}" class="btn-edit-cat">Edit Category Name</button>
+                <a href="{% url 'delete_category' category.id %}" class="btn-delete-cat">Delete Category</a>
                 {% endif %}
-                <a href="{% url 'syllabus_landing' %}" class="back-btn">← Back to Syllabus</a>
+                <a href="{% url 'syllabus_landing' %}" class="back-btn">Back to Categories</a>
             </div>
         </div>
 
@@ -126,6 +259,110 @@
         </div>
         {% endif %}
     </div>
+
+    {% if request.user.is_superuser %}
+    <!-- Rename Modal -->
+    <div id="rename-modal" class="modal">
+        <div class="modal-content">
+            <h3>Rename Category</h3>
+            <p>Enter new name for this category. If you enter the name of another existing category, they will automatically merge!</p>
+            <input type="text" id="modal-input" placeholder="Category Name" class="modal-input">
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="modal-btn cancel-btn">Cancel</button>
+                <button id="modal-submit-btn" class="modal-btn submit-btn">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const editBtn = document.getElementById('edit-category-btn');
+        const modal = document.getElementById('rename-modal');
+        const modalInput = document.getElementById('modal-input');
+        const cancelBtn = document.getElementById('modal-cancel-btn');
+        const submitBtn = document.getElementById('modal-submit-btn');
+        
+        let targetCatId = null;
+
+        if (editBtn && modal) {
+            editBtn.addEventListener('click', function() {
+                targetCatId = this.getAttribute('data-id');
+                modalInput.value = this.getAttribute('data-name');
+                modal.classList.add('show');
+                modalInput.focus();
+            });
+            
+            cancelBtn.addEventListener('click', function() {
+                modal.classList.remove('show');
+            });
+            
+            // Close if clicking outside the modal content
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                }
+            });
+            
+            submitBtn.addEventListener('click', function() {
+                const newName = modalInput.value.trim();
+                if (!newName) {
+                    alert("Category name cannot be empty.");
+                    return;
+                }
+                
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Renaming...";
+                
+                const formData = new FormData();
+                formData.append('category_name', newName);
+                
+                fetch(`/edit_category_inline/${targetCatId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.merged) {
+                            alert("Categories merged successfully!");
+                            window.location.href = data.redirect_url;
+                        } else {
+                            alert("Category renamed successfully!");
+                            window.location.href = `/guidance/${data.new_slug}/`;
+                        }
+                    } else {
+                        alert("Error: " + data.message);
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = "Rename";
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("An error occurred while renaming the category.");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Rename";
+                });
+            });
+        }
+    </script>
+    {% endif %}
 </body>
 
 </html>

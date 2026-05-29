@@ -56,4 +56,23 @@ urlpatterns = [
     path('guidance/topic/<int:topic_id>/mcq/submit/', views.syllabus_topic_mcq_submit_view, name='syllabus_topic_mcq_submit'),
     path('guidance/topic/<int:topic_id>/notes/save/', views.syllabus_topic_notes_save_view, name='syllabus_topic_notes_save'),
     path('guidance/<slug:category_slug>/subject/<int:subject_id>/topic/<int:topic_id>/mcq/attempt/<int:attempt_id>/review/', views.mcq_attempt_review_view, name='mcq_attempt_review'),
+
+    # Category edit URL
+    path('edit_category_inline/<int:category_id>/', views.edit_category_inline, name='edit_category_inline'),
+    
+    # Inline MCQ edits
+    path('edit_individual_mcq/<int:mcq_id>/', views.edit_individual_mcq, name='edit_individual_mcq'),
+    path('delete_individual_mcq/<int:mcq_id>/', views.delete_individual_mcq, name='delete_individual_mcq'),
+    
+    # Answer Writing Admin Routes
+    path('add_answer_writing_question/<int:topic_id>/', views.add_answer_writing_question, name='add_answer_writing_question'),
+    path('edit_answer_writing_question/<int:question_id>/', views.edit_answer_writing_question, name='edit_answer_writing_question'),
+    path('delete_answer_writing_question/<int:question_id>/', views.delete_answer_writing_question, name='delete_answer_writing_question'),
+    
+    # Answer Writing Student & Remark Routes
+    path('submit_answer_writing/<int:question_id>/', views.submit_answer_writing, name='submit_answer_writing'),
+    path('save_remark/<int:submission_id>/', views.save_remark, name='save_remark'),
+    
+    # Material Engagement Tracking
+    path('api/track-material-engagement/', views.track_material_engagement, name='track_material_engagement'),
 ]

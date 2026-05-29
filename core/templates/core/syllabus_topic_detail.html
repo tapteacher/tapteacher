@@ -357,69 +357,25 @@
             margin-top: 2px;
         }
 
-        /* Personal Notes Tab */
-        .notes-container {
+        /* Answer Writing Tab styles */
+        .answer-writing-container {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
         }
-
-        .notes-textarea {
-            width: 100%;
-            min-height: 250px;
-            padding: 16px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 15px;
-            line-height: 1.6;
-            resize: vertical;
-            box-sizing: border-box;
-            background: #fafafc;
-            color: var(--text-main);
-            transition: border-color 0.2s, background-color 0.2s;
+        .question-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-
-        .notes-textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: #ffffff;
+        .question-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
-
-        .notes-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .upload-form-wrapper {
+            transition: all 0.2s ease;
         }
-
-        .notes-status {
-            font-size: 13px;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .status-pill {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--text-muted);
-        }
-
-        .status-pill.saving {
-            background: #eab308;
-            animation: pulse 1s infinite alternate;
-        }
-
-        .status-pill.saved {
-            background: var(--success);
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.5; }
-            100% { transform: scale(1.3); opacity: 1; }
+        .upload-form-wrapper:hover {
+            border-color: #7c3aed !important;
+            background: #faf5ff !important;
         }
 
         /* Analytics Panel styling */
@@ -550,10 +506,12 @@
                 <a href="{% url 'syllabus_topic_edit' category.slug subject.id topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
                     class="btn btn-secondary">Edit Topic</a>
                 <a href="{% url 'delete_topic' topic.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                   class="btn btn-danger">🗑️ Delete Topic</a>
+                   class="btn btn-danger">Delete Topic</a>
                 {% endif %}
                 <a href="{% url 'syllabus_subject' category_slug=category.slug subject_id=subject.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                    class="btn btn-secondary">← Back to Topics</a>
+                    class="btn btn-secondary">Back to Topics</a>
+                <a href="{% url 'syllabus_landing' %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
+                    class="btn btn-secondary">Back to Categories</a>
             </div>
         </div>
 
@@ -561,7 +519,7 @@
         {% if topic.description %}
         <div class="desc-card">
             <h3>Description</h3>
-            <div class="topic-desc">{{ topic.description }}</div>
+            <div class="topic-desc">{{ topic.description|urlize|safe }}</div>
         </div>
         {% endif %}
 
@@ -572,7 +530,7 @@
             <div class="tab-buttons">
                 <button class="tab-btn active" onclick="switchTab('materials')">📁 Material Files</button>
                 <button class="tab-btn" onclick="switchTab('quizzes')">📝 Topic Quizzes</button>
-                <button class="tab-btn" onclick="switchTab('notes')">✍️ Personal Notes</button>
+                <button class="tab-btn" onclick="switchTab('notes')">✍️ Answer Writing</button>
             </div>
 
             <!-- Tab 1: Materials & Files -->
@@ -651,6 +609,51 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+
+                <!-- Superadmin Material Engagement View -->
+                {% if request.user.is_superuser %}
+                <div class="analytics-card" style="margin-top: 30px;">
+                    <h3 class="analytics-title">📊 Candidates Material Engagement (Superadmin View)</h3>
+                    <div class="analytics-table-wrapper">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>Candidate Name</th>
+                                    <th>Description Link Clicks</th>
+                                    <th>PDF/Document Opens</th>
+                                    <th>Last Accessed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for engagement in material_engagements %}
+                                <tr>
+                                    <td style="font-weight: 600;">
+                                        <a href="{% url 'user_dashboard_admin' engagement.user.id %}" style="color: var(--primary); text-decoration: none; display: inline-block;" onmouseover="this.style.textDecoration='underline';" onmouseout="this.style.textDecoration='none';">
+                                            {{ engagement.user.first_name }} {{ engagement.user.last_name }} ({{ engagement.user.email }})
+                                        </a>
+                                    </td>
+                                    <td style="font-weight: 700; color: var(--primary);">
+                                        {{ engagement.link_click_count }}
+                                    </td>
+                                    <td style="font-weight: 700; color: var(--success);">
+                                        {{ engagement.pdf_open_count }}
+                                    </td>
+                                    <td style="color: var(--text-muted); font-size: 13px;">
+                                        {{ engagement.last_accessed|date:"d M Y, h:i A" }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                        No material engagements recorded yet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Tab 2: Quizzes (MCQ) -->
@@ -723,79 +726,250 @@
                 {% endif %}
 
                 {% endif %}{# closes if mcq_set #}
+
+                <!-- Admin Attempt Analytics Dashboard (if user is superuser and mcq_set exists) -->
+                {% if request.user.is_superuser and mcq_set %}
+                <div class="analytics-card" style="margin-top: 25px;">
+                    <h3 class="analytics-title">📊 Candidates MCQ Analytics (Superadmin View)</h3>
+                    <div class="analytics-table-wrapper">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>Candidate Name</th>
+                                    <th>Correct</th>
+                                    <th>Wrong</th>
+                                    <th>Skipped</th>
+                                    <th>Score %</th>
+                                    <th>Time Spent</th>
+                                    <th>Attempted At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for attempt in all_attempts %}
+                                <tr>
+                                    <td style="font-weight: 600;">
+                                        <a href="{% url 'user_dashboard_admin' attempt.user.id %}" style="color: var(--primary); text-decoration: none; display: inline-block;" onmouseover="this.style.textDecoration='underline';" onmouseout="this.style.textDecoration='none';">
+                                            {{ attempt.user.first_name }} {{ attempt.user.last_name }}
+                                        </a>
+                                        <a href="mailto:{{ attempt.user.email }}" style="color: var(--text-muted); text-decoration: none; font-size: 13px; margin-left: 4px;" onmouseover="this.style.textDecoration='underline';" onmouseout="this.style.textDecoration='none';">
+                                            ({{ attempt.user.email }})
+                                        </a>
+                                        <span style="margin-left:8px; background: #e0e7ff; color: #4338ca; font-size: 11px; padding: 3px 6px; border-radius: 4px; font-weight: 700;">Attempt #{{ attempt.attempt_number }}</span>
+                                    </td>
+                                    <td style="font-weight: 700;">
+                                        <a href="{% url 'mcq_attempt_review' category.slug subject.id topic.id attempt.id %}?tab=correct" style="color: var(--success); text-decoration: none; padding: 4px 8px; border-radius: 4px;" onmouseover="this.style.background='rgba(16, 185, 129, 0.1)'; this.style.textDecoration='underline';" onmouseout="this.style.background='none'; this.style.textDecoration='none';">
+                                            {{ attempt.correct_count }}
+                                        </a>
+                                    </td>
+                                    <td style="font-weight: 700;">
+                                        <a href="{% url 'mcq_attempt_review' category.slug subject.id topic.id attempt.id %}?tab=wrong" style="color: var(--danger); text-decoration: none; padding: 4px 8px; border-radius: 4px;" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'; this.style.textDecoration='underline';" onmouseout="this.style.background='none'; this.style.textDecoration='none';">
+                                            {{ attempt.wrong_count }}
+                                        </a>
+                                    </td>
+                                    <td style="font-weight: 700;">
+                                        <a href="{% url 'mcq_attempt_review' category.slug subject.id topic.id attempt.id %}?tab=skipped" style="color: var(--text-main); text-decoration: none; padding: 4px 8px; border-radius: 4px;" onmouseover="this.style.background='rgba(100, 116, 139, 0.1)'; this.style.textDecoration='underline';" onmouseout="this.style.background='none'; this.style.textDecoration='none';">
+                                            {{ attempt.skipped_count }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if attempt.score_percentage >= 50 %}badge-success{% else %}badge-danger{% endif %}">
+                                            {{ attempt.score_percentage|floatformat:1 }}%
+                                        </span>
+                                    </td>
+                                    <td>{{ attempt.formatted_time_taken }}</td>
+                                    <td style="color: var(--text-muted); font-size: 13px;">
+                                        {{ attempt.attempted_at|date:"d M Y, h:i A" }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                        No attempts registered for this topic yet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
 
-            <!-- Tab 3: Personal Notes -->
+            <!-- Tab 3: Answer Writing -->
             <div class="tab-content" id="tab-notes">
-                <div class="notes-container">
-                    <div style="font-size: 14px; color: var(--text-muted); font-weight: 500;">
-                        Draft your personalized study notes for this topic below. Notes are autosaved as you type and limited to a max size of 5.0 MB.
-                    </div>
-                    <textarea class="notes-textarea" id="notes-textarea-input" placeholder="Start typing your notes here..." oninput="onNotesInput()">{{ user_notes.notes_text|default:'' }}</textarea>
+                <div class="answer-writing-container" style="display: flex; flex-direction: column; gap: 20px;">
                     
-                    <div class="notes-footer">
-                        <div class="notes-status" id="notes-save-status">
-                            <span class="status-pill" id="status-indicator"></span>
-                            <span id="status-text">Drafting notes</span>
-                        </div>
-                        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted);" id="notes-char-counter">
-                            5.00 MB remaining
+                    <!-- Admin Panel: Add Question -->
+                    {% if request.user.is_superuser %}
+                    <div class="admin-add-question-card" style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <h4 style="margin: 0 0 12px 0; color: #6b21a8; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700;">
+                            <span>➕</span> Add Question for Answer Writing
+                        </h4>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <textarea id="new-question-text" placeholder="Enter the new question for students here..." rows="2" style="flex: 1; min-width: 250px; padding: 12px; border: 1px solid #d8b4fe; border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box; resize: vertical; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='#d8b4fe'"></textarea>
+                            <button class="btn btn-primary" onclick="addAnswerQuestion({{ topic.id }})" style="background: #7c3aed; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; transition: all 0.2s;">Add Question</button>
                         </div>
                     </div>
+                    {% endif %}
+
+                    <!-- Questions List -->
+                    <div class="questions-list-wrapper" id="questions-list" style="display: flex; flex-direction: column; gap: 20px;">
+                        {% for question in answer_writing_questions %}
+                        <div class="question-card" id="question-card-{{ question.id }}" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s;">
+                            
+                            <!-- Question Header & Text -->
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 16px;">
+                                <div style="flex: 1;">
+                                    <span style="display: inline-block; background: #f3e8ff; color: #6b21a8; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; margin-bottom: 8px;">Question #{{ forloop.counter }}</span>
+                                    <div class="question-text-display" id="question-text-{{ question.id }}" style="font-size: 16px; font-weight: 600; color: #1f2937; line-height: 1.5; white-space: pre-wrap;">{{ question.question_text }}</div>
+                                    
+                                    <!-- Inline Edit Form (Hidden) -->
+                                    <div class="question-edit-form" id="question-edit-form-{{ question.id }}" style="display: none; margin-top: 8px;">
+                                        <textarea id="edit-input-{{ question.id }}" rows="2" style="width: 100%; padding: 10px; border: 1px solid #a78bfa; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical;">{{ question.question_text }}</textarea>
+                                        <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end;">
+                                            <button class="btn btn-secondary" onclick="toggleEditQuestion({{ question.id }}, false)" style="padding: 6px 12px; font-size: 12px;">Cancel</button>
+                                            <button class="btn btn-primary" onclick="saveEditQuestion({{ question.id }})" style="padding: 6px 12px; font-size: 12px; background: #7c3aed;">Save</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {% if request.user.is_superuser %}
+                                <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                    <button class="btn btn-secondary" onclick="toggleEditQuestion({{ question.id }}, true)" style="padding: 6px 12px; font-size: 12px; border-color: #d1d5db; color: #4b5563; font-weight: 500; cursor: pointer;">✏️ Edit</button>
+                                    <button class="btn btn-secondary" onclick="deleteAnswerQuestion({{ question.id }})" style="padding: 6px 12px; font-size: 12px; border-color: #fca5a5; color: #dc2626; font-weight: 500; cursor: pointer;">🗑️ Delete</button>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- User Submissions Section (Student View) -->
+                            {% if not request.user.is_superuser %}
+                            <div class="student-submission-section" style="border-top: 1px solid #f3f4f6; padding-top: 16px; margin-top: 16px;">
+                                {% if question.user_submission %}
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="color: #15803d; font-size: 18px;">✅</span>
+                                        <div>
+                                            <div style="font-size: 14px; font-weight: 600; color: #166534;">Answer Submitted</div>
+                                            <span style="font-size: 12px; color: #166534; opacity: 0.85;">Submitted on {{ question.user_submission.submitted_at|date:"d M Y, h:i A" }}</span>
+                                        </div>
+                                    </div>
+                                    <a href="{{ question.user_submission.submitted_file.url }}" target="_blank" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; background: white; border-color: #bbf7d0; color: #166534;">View My Answer</a>
+                                </div>
+
+                                <!-- Resubmit Trigger Button -->
+                                <button class="btn btn-secondary" onclick="toggleResubmitForm({{ question.id }})" style="font-size: 12px; padding: 6px 12px; border-color: #d1d5db; color: #4b5563; margin-bottom: 16px; font-weight: 500; cursor: pointer;">🔄 Resubmit Answer</button>
+                                
+                                <!-- Resubmit Form (Hidden) -->
+                                <div class="upload-form-wrapper" id="upload-form-{{ question.id }}" style="display: none; background: #fafafa; border: 2px dashed #cccccc; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 16px;">
+                                    <input type="file" id="file-input-{{ question.id }}" accept="image/*,application/pdf" capture="environment" style="display: none;" onchange="handleFileSelected({{ question.id }})">
+                                    <div id="drop-zone-{{ question.id }}" onclick="document.getElementById('file-input-{{ question.id }}').click()" style="cursor: pointer; padding: 20px;">
+                                        <span style="font-size: 28px; display: block; margin-bottom: 8px;">📸</span>
+                                        <span style="font-size: 14px; font-weight: 600; color: #4b5563; display: block;">Tap to Take Photo or Choose File</span>
+                                        <span style="font-size: 11px; color: #9ca3af; display: block; margin-top: 4px;">PDF or Image (Max 4MB)</span>
+                                    </div>
+                                    <div id="file-name-{{ question.id }}" style="font-size: 13px; font-weight: 700; color: #7c3aed; margin-top: 10px; display: none;"></div>
+                                    <button class="btn btn-primary" onclick="submitAnswer({{ question.id }})" style="margin-top: 12px; padding: 8px 20px; font-size: 13px; background: #7c3aed; display: none;" id="submit-btn-{{ question.id }}">Submit Answer</button>
+                                </div>
+
+                                <!-- Admin Remarks Panel for Student -->
+                                <div class="admin-remarks-feedback" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+                                    {% if question.user_submission.remarked_at %}
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                        <span style="display: inline-block; background: #10b981; color: white; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">Reviewed by Admin</span>
+                                        <span style="font-size: 12px; color: var(--text-muted);">Reviewed on {{ question.user_submission.remarked_at|date:"d M Y" }}</span>
+                                    </div>
+                                    <div style="font-size: 14px; color: #334155; line-height: 1.5; background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+                                        <strong>Admin's Remark:</strong> {{ question.user_submission.remark_text|urlize|safe|default:"No written remarks." }}
+                                    </div>
+                                    {% if question.user_submission.remark_file %}
+                                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                        <span style="font-size: 13px; color: #475569; font-weight: 500;">📎 Checked Sheet / Annotation File:</span>
+                                        <a href="{{ question.user_submission.remark_file.url }}" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" target="_blank">View Checked Sheet</a>
+                                    </div>
+                                    {% endif %}
+                                    {% else %}
+                                    <div style="display: flex; align-items: center; gap: 8px; color: #d97706; font-size: 13px; font-weight: 600;">
+                                        <span>⏳</span> Awaiting Admin Review & Checked Sheets...
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                {% else %}
+                                <!-- No submission yet -->
+                                <div class="upload-form-wrapper" id="upload-form-{{ question.id }}" style="background: #fafafa; border: 2px dashed #cccccc; border-radius: 12px; padding: 30px; text-align: center;">
+                                    <input type="file" id="file-input-{{ question.id }}" accept="image/*,application/pdf" capture="environment" style="display: none;" onchange="handleFileSelected({{ question.id }})">
+                                    <div id="drop-zone-{{ question.id }}" onclick="document.getElementById('file-input-{{ question.id }}').click()" style="cursor: pointer;">
+                                        <span style="font-size: 40px; display: block; margin-bottom: 12px;">📸</span>
+                                        <span style="font-size: 15px; font-weight: 700; color: #374151; display: block;">Upload Answer / Open Camera</span>
+                                        <span style="font-size: 12px; color: #6b7280; display: block; margin-top: 4px;">Capture your handwritten answer directly or pick PDF/Image (Max 4MB)</span>
+                                    </div>
+                                    <div id="file-name-{{ question.id }}" style="font-size: 13px; font-weight: 700; color: #7c3aed; margin-top: 12px; display: none;"></div>
+                                    <button class="btn btn-primary" onclick="submitAnswer({{ question.id }})" style="margin-top: 16px; padding: 10px 24px; font-size: 14px; background: #7c3aed; display: none;" id="submit-btn-{{ question.id }}">Submit Answer</button>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            <!-- User Submissions List (Admin View) -->
+                            {% if request.user.is_superuser %}
+                            <div class="admin-submissions-section" style="border-top: 1px solid #f3f4f6; padding-top: 16px; margin-top: 16px;">
+                                <h5 style="margin: 0 0 12px 0; font-size: 14px; color: #4b5563; font-weight: 700;">Candidate Submissions ({{ question.all_submissions.count }})</h5>
+                                
+                                {% for sub in question.all_submissions %}
+                                <div class="candidate-submission-row" style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                                        <div>
+                                            <a href="{% url 'user_dashboard_admin' sub.user.id %}" style="font-weight: 700; color: #7c3aed; text-decoration: none;">{{ sub.user.first_name }} {{ sub.user.last_name }}</a>
+                                            <span style="font-size: 12px; color: #6b7280; margin-left: 6px;">({{ sub.user.email }})</span>
+                                        </div>
+                                        <a href="{{ sub.submitted_file.url }}" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; background: white;" target="_blank">📥 View Answer</a>
+                                    </div>
+
+                                    <!-- Remarks display or Form -->
+                                    <div class="remark-form-wrapper" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px;">
+                                        <form id="remark-form-{{ sub.id }}" onsubmit="saveRemark(event, {{ sub.id }})">
+                                            <div style="font-size: 12px; font-weight: 700; color: #4b5563; margin-bottom: 6px;">Evaluation Remarks:</div>
+                                            <textarea name="remark_text" rows="2" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; margin-bottom:10px; font-family: inherit;" placeholder="Write checked remarks here...">{{ sub.remark_text|default:'' }}</textarea>
+                                            
+                                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <label style="font-size:12px; font-weight:600; color:#4b5563; cursor:pointer; background: #f3f4f6; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                                                        📎 {% if sub.remark_file %}Update{% else %}Upload{% endif %} Checked File
+                                                        <input type="file" name="remark_file" accept="image/*,application/pdf" style="display: none;" onchange="this.nextElementSibling.innerText = this.files[0].name; this.nextElementSibling.style.display='inline-block'">
+                                                        <span style="font-size: 11px; font-weight: normal; color: #6b7280; margin-left: 6px; display: none;"></span>
+                                                    </label>
+                                                    {% if sub.remark_file %}
+                                                    <a href="{{ sub.remark_file.url }}" target="_blank" style="font-size: 11px; color: #10b981; font-weight: 600; text-decoration: none;">View Checked File</a>
+                                                    {% endif %}
+                                                </div>
+                                                <button type="submit" class="btn btn-primary" style="font-size: 12px; padding: 8px 16px; background: #10b981; border: none; cursor: pointer; font-weight: 600;">Save & Notify</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div style="font-size: 13px; color: #9ca3af; font-style: italic;">No student submissions yet for this question.</div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                        </div>
+                        {% empty %}
+                        <div style="text-align: center; padding: 40px 20px; background: #fafafa; border: 1px dashed #ccc; border-radius: 12px; width: 100%;">
+                            <span style="font-size: 40px; display: block; margin-bottom: 12px;">📝</span>
+                            <h4 style="margin: 0; color: #374151; font-size: 15px; font-weight: 700;">No Answer Writing Questions Yet</h4>
+                            <p style="margin: 6px 0 0 0; font-size: 13px; color: #6b7280;">Admin has not uploaded any questions for this topic yet.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
                 </div>
             </div>
 
         </div>
 
-        <!-- Admin Attempt Analytics Dashboard (if user is superuser and mcq_set exists) -->
-        {% if request.user.is_superuser and mcq_set %}
-        <div class="analytics-card">
-            <h3 class="analytics-title">📊 Candidates MCQ Analytics (Superadmin View)</h3>
-            <div class="analytics-table-wrapper">
-                <table class="analytics-table">
-                    <thead>
-                        <tr>
-                            <th>Candidate Name</th>
-                            <th>Correct</th>
-                            <th>Wrong</th>
-                            <th>Skipped</th>
-                            <th>Score %</th>
-                            <th>Time Spent</th>
-                            <th>Attempted At</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for attempt in all_attempts %}
-                        <tr onclick="window.location.href='{% url 'user_dashboard_admin' attempt.user.id %}'">
-                            <td style="font-weight: 600; color: var(--primary);">
-                                {{ attempt.user.first_name }} {{ attempt.user.last_name }} ({{ attempt.user.email }})
-                            </td>
-                            <td style="color: var(--success); font-weight: 700;">{{ attempt.correct_count }}</td>
-                            <td style="color: var(--danger); font-weight: 700;">{{ attempt.wrong_count }}</td>
-                            <td>{{ attempt.skipped_count }}</td>
-                            <td>
-                                <span class="badge {% if attempt.score_percentage >= 50 %}badge-success{% else %}badge-danger{% endif %}">
-                                    {{ attempt.score_percentage|floatformat:1 }}%
-                                </span>
-                            </td>
-                            <td>{{ attempt.formatted_time_taken }}</td>
-                            <td style="color: var(--text-muted); font-size: 13px;">
-                                {{ attempt.attempted_at|date:"d M Y, h:i A" }}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">
-                                No attempts registered for this topic yet.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
+
 
         <!-- File download visual loader -->
         <div id="download-loader">
@@ -931,15 +1105,47 @@
             }
         });
 
-        // Open loaders
+        // Open loaders and track PDF/PPT open
         document.querySelectorAll('.material-item').forEach(link => {
             link.addEventListener('click', function () {
+                trackMaterialEngagement('pdf');
                 const loader = document.getElementById('download-loader');
-                loader.style.display = 'block';
-                setTimeout(() => {
-                    loader.style.display = 'none';
-                }, 3000);
+                if (loader) {
+                    loader.style.display = 'block';
+                    setTimeout(() => {
+                        loader.style.display = 'none';
+                    }, 3000);
+                }
             });
+        });
+
+        // Tracking click engagement for Materials and Description Links
+        function trackMaterialEngagement(action) {
+            {% if not request.user.is_superuser %}
+            fetch("{% url 'track_material_engagement' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    topic_id: {{ topic.id }},
+                    action: action
+                })
+            }).catch(err => console.error('Tracking failed', err));
+            {% endif %}
+        }
+
+        // Attach click tracking to description links
+        document.addEventListener('DOMContentLoaded', () => {
+            const descContainer = document.querySelector('.topic-desc');
+            if (descContainer) {
+                descContainer.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', () => {
+                        trackMaterialEngagement('link');
+                    });
+                });
+            }
         });
 
         // ===== Add MCQ Panel JS =====
@@ -1052,6 +1258,225 @@
                 questions.push({ question: txtEl.value.trim(), options: opts, correct: correctIdx });
             });
             return JSON.stringify(questions);
+        }
+
+        // ================= ANSWER WRITING INTERACTION LOGIC =================
+        
+        // Admin: Add new answer writing question dynamically
+        function addAnswerQuestion(topicId) {
+            const textarea = document.getElementById('new-question-text');
+            const questionText = textarea.value.trim();
+            if (!questionText) {
+                alert('Please enter a question prompt.');
+                return;
+            }
+            
+            fetch(`/add_answer_writing_question/${topicId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ question_text: questionText })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Question added successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('An unexpected error occurred.');
+            });
+        }
+        
+        // Admin: Toggle inline editing mode of a question text
+        function toggleEditQuestion(questionId, show) {
+            const displayEl = document.getElementById(`question-text-${questionId}`);
+            const formEl = document.getElementById(`question-edit-form-${questionId}`);
+            if (show) {
+                displayEl.style.display = 'none';
+                formEl.style.display = 'block';
+            } else {
+                displayEl.style.display = 'block';
+                formEl.style.display = 'none';
+            }
+        }
+        
+        // Admin: Save inline edited question
+        function saveEditQuestion(questionId) {
+            const inputEl = document.getElementById(`edit-input-${questionId}`);
+            const questionText = inputEl.value.trim();
+            if (!questionText) {
+                alert('Question text cannot be empty.');
+                return;
+            }
+            
+            fetch(`/edit_answer_writing_question/${questionId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ question_text: questionText })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Question updated successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('An unexpected error occurred.');
+            });
+        }
+        
+        // Admin: Delete question
+        function deleteAnswerQuestion(questionId) {
+            if (!confirm('Are you sure you want to permanently delete this question and all candidate submissions? This action is irreversible.')) {
+                return;
+            }
+            
+            fetch(`/delete_answer_writing_question/${questionId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Question deleted successfully.');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('An unexpected error occurred.');
+            });
+        }
+        
+        // Candidate: Toggle resubmit panel display
+        function toggleResubmitForm(questionId) {
+            const wrapper = document.getElementById(`upload-form-${questionId}`);
+            if (wrapper.style.display === 'none') {
+                wrapper.style.display = 'block';
+            } else {
+                wrapper.style.display = 'none';
+            }
+        }
+        
+        // Candidate: Handle camera-ready/file selected
+        const selectedFiles = {};
+        function handleFileSelected(questionId) {
+            const fileInput = document.getElementById(`file-input-${questionId}`);
+            const nameDiv = document.getElementById(`file-name-${questionId}`);
+            const submitBtn = document.getElementById(`submit-btn-${questionId}`);
+            
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                
+                // Enforce 4MB max limit
+                if (file.size > 4 * 1024 * 1024) {
+                    alert('The file size exceeds the 4MB limit. Please choose/capture a smaller file.');
+                    fileInput.value = '';
+                    nameDiv.style.display = 'none';
+                    submitBtn.style.display = 'none';
+                    return;
+                }
+                
+                selectedFiles[questionId] = file;
+                nameDiv.innerText = `Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+                nameDiv.style.display = 'block';
+                submitBtn.style.display = 'inline-block';
+            }
+        }
+        
+        // Candidate: Submit answer file via AJAX
+        function submitAnswer(questionId) {
+            const file = selectedFiles[questionId];
+            if (!file) {
+                alert('Please take a photo or select a file first.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('submitted_file', file);
+            
+            const submitBtn = document.getElementById(`submit-btn-${questionId}`);
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Submitting...';
+            
+            fetch(`/submit_answer_writing/${questionId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Answer submitted successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Submit Answer';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('An unexpected error occurred during submission.');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Submit Answer';
+            });
+        }
+        
+        // Admin: Save remark and send email notification
+        function saveRemark(event, submissionId) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Saving & Notifying...';
+            
+            fetch(`/save_remark/${submissionId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.email_sent ? 'Remark saved and candidate notified via email!' : 'Remark saved, but daily email quota has been reached.');
+                    window.location.reload();
+                } else {
+                    alert('Error saving remarks: ' + data.message);
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Save & Notify';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('An unexpected error occurred while saving.');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Save & Notify';
+            });
         }
     </script>
 </body>

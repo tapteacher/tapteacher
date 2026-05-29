@@ -104,7 +104,7 @@
             <h1>Vacancy Guidance</h1>
         </div>
 
-        <div class="category-grid" style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+        <div class="category-grid" style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
             {% for cat in categories %}
             <a href="{% url 'syllabus_category' cat.slug %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
                 class="category-card {% if cat.should_blink %}blink-red{% endif %}">

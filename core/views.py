@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -899,6 +900,20 @@ def admin_dashboard(request):
                                     import traceback
                                     print(f"Error parsing MCQ JSON for topic {i}:", json_err)
                                     print(traceback.format_exc())
+
+                        # ===== Save Answer Writing Section =====
+                        answer_questions_list = request.POST.getlist(f'topic_answer_questions_{i}[]')
+                        if not answer_questions_list:
+                            raw_text = request.POST.get(f'topic_answer_questions_{i}', '').strip()
+                            if raw_text:
+                                answer_questions_list = [q.strip() for q in raw_text.split('\n') if q.strip()]
+                                
+                        if answer_questions_list:
+                            from .models import AnswerWritingQuestion
+                            for q_text in answer_questions_list:
+                                q_text_clean = q_text.strip()
+                                if q_text_clean:
+                                    AnswerWritingQuestion.objects.create(topic=topic, question_text=q_text_clean)
                 
                 return redirect('admin_dashboard')
             except Exception as e:
@@ -1392,9 +1407,10 @@ def syllabus_landing(request):
     from django.utils import timezone
     from datetime import timedelta
 
-    defaults = ['prt', 'tgt', 'pgt', 'other']
-    for slug in defaults:
-        GuidanceCategory.objects.get_or_create(slug=slug, defaults={'name': slug.upper() + ' Vacancy'})
+    if GuidanceCategory.objects.count() == 0:
+        defaults = ['prt', 'tgt', 'pgt', 'other']
+        for slug in defaults:
+            GuidanceCategory.objects.get_or_create(slug=slug, defaults={'name': slug.upper() + ' Vacancy'})
 
     # Determine user's reference time
     last_visit = None
@@ -1579,14 +1595,32 @@ def syllabus_topic_detail_view(request, category_slug, subject_id, topic_id):
 
     # Admin Analytics (All attempts distinct by user)
     all_attempts = []
-    if request.user.is_superuser and mcq_set:
-        raw_attempts = MCQAttempt.objects.filter(mcq_set=mcq_set).select_related('user').order_by('user', '-attempted_at')
-        seen_users = set()
-        for att in raw_attempts:
-            if att.user.id not in seen_users:
-                all_attempts.append(att)
-                seen_users.add(att.user.id)
-        all_attempts.sort(key=lambda x: x.attempted_at, reverse=True)
+    material_engagements = []
+    if request.user.is_superuser:
+        if mcq_set:
+            raw_attempts = MCQAttempt.objects.filter(mcq_set=mcq_set).select_related('user').order_by('user', '-attempted_at')
+            seen_users = set()
+            for att in raw_attempts:
+                if att.user.id not in seen_users:
+                    all_attempts.append(att)
+                    seen_users.add(att.user.id)
+            all_attempts.sort(key=lambda x: x.attempted_at, reverse=True)
+            
+            for att in all_attempts:
+                att.attempt_number = MCQAttempt.objects.filter(user=att.user, mcq_set=mcq_set).count()
+
+        # Query all material engagements for this topic
+        from .models import MaterialEngagement
+        material_engagements = MaterialEngagement.objects.filter(topic=topic).select_related('user').order_by('-last_accessed')
+
+    # Answer Writing Context
+    from .models import AnswerWritingQuestion
+    answer_writing_questions = list(AnswerWritingQuestion.objects.filter(topic=topic).order_by('created_at'))
+    for q in answer_writing_questions:
+        if request.user.is_superuser:
+            q.all_submissions = q.submissions.all().select_related('user').order_by('-submitted_at')
+        else:
+            q.user_submission = q.submissions.filter(user=request.user).first()
 
     return render(request, 'core/syllabus_topic_detail.html', {
         'category': category,
@@ -1596,6 +1630,8 @@ def syllabus_topic_detail_view(request, category_slug, subject_id, topic_id):
         'latest_attempt': latest_attempt,
         'user_notes': user_notes,
         'all_attempts': all_attempts,
+        'material_engagements': material_engagements,
+        'answer_writing_questions': answer_writing_questions,
         'view_as_user': request.GET.get('view_as') if request.user.is_superuser else None
     })
 
@@ -2403,3 +2439,357 @@ def mcq_attempt_review_view(request, category_slug, subject_id, topic_id, attemp
         'answers': answers,
         'initial_tab': request.GET.get('tab', 'wrong'),
     })
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def edit_category_inline(request, category_id):
+    """Superadmin: inline renaming and potential merging of category name in guidance system."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+    
+    if request.method == 'POST':
+        from .models import GuidanceCategory, GuidanceSubject
+        from django.utils.text import slugify
+        
+        category = get_object_or_404(GuidanceCategory, id=category_id)
+        new_name = request.POST.get('category_name', '').strip()
+        
+        if not new_name:
+            return JsonResponse({'success': False, 'message': 'Category name cannot be empty.'}, status=400)
+            
+        new_slug = slugify(new_name)
+        if not new_slug:
+            new_slug = "other"
+            
+        # Check if another category with the same slug exists (case & whitespace merging)
+        target_category = GuidanceCategory.objects.filter(slug=new_slug).exclude(id=category.id).first()
+        if target_category:
+            # MERGING WORKFLOW:
+            # Move all subjects of current category into the target category
+            subjects = GuidanceSubject.objects.filter(category=category)
+            for sub in subjects:
+                # Deduplicate subject name inside target category
+                norm_name = "".join(sub.name.split()).lower()
+                existing_sub = GuidanceSubject.objects.filter(category=target_category)
+                matched_sub = None
+                for es in existing_sub:
+                    if "".join(es.name.split()).lower() == norm_name:
+                        matched_sub = es
+                        break
+                
+                if matched_sub:
+                    # Move all topics from sub to matched_sub
+                    for topic in sub.topics.all():
+                        topic.subject = matched_sub
+                        topic.save()
+                    # Delete the empty sub
+                    sub.delete()
+                else:
+                    sub.category = target_category
+                    sub.save()
+                    
+            category.delete() # Safe cascading delete of any remaining empty elements
+            return JsonResponse({'success': True, 'merged': True, 'redirect_url': '/guidance/'})
+        else:
+            category.name = new_name
+            category.slug = new_slug
+            category.save()
+            return JsonResponse({'success': True, 'merged': False, 'new_slug': new_slug})
+            
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def edit_individual_mcq(request, mcq_id):
+    """Superadmin: inline editing of an individual MCQ question text and option values."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+        
+    if request.method == 'POST':
+        from .models import MCQ, MCQOption
+        import json
+        try:
+            data = json.loads(request.body)
+            question_text = data.get('question_text', '').strip()
+            options = data.get('options', [])
+            correct_label = data.get('correct_label', 'A').strip().upper()
+            
+            if not question_text:
+                return JsonResponse({'success': False, 'message': 'Question text cannot be empty.'}, status=400)
+                
+            mcq = MCQ.objects.get(id=mcq_id)
+            mcq.question_text = question_text
+            mcq.save()
+            
+            # Rebuild options to prevent inconsistencies
+            mcq.options.all().delete()
+            for idx, opt_text in enumerate(options):
+                label = chr(65 + idx)
+                MCQOption.objects.create(
+                    mcq=mcq,
+                    label=label,
+                    option_text=opt_text.strip(),
+                    is_correct=(label == correct_label)
+                )
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def delete_individual_mcq(request, mcq_id):
+    """Superadmin: permanently delete a single MCQ question from an MCQ Set."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+        
+    if request.method == 'POST':
+        from .models import MCQ
+        try:
+            mcq = MCQ.objects.get(id=mcq_id)
+            mcq.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def add_answer_writing_question(request, topic_id):
+    """Superadmin: dynamically add a new Answer Writing question to a topic."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+        
+    if request.method == 'POST':
+        from .models import GuidanceTopic, AnswerWritingQuestion
+        import json
+        try:
+            data = json.loads(request.body)
+            question_text = data.get('question_text', '').strip()
+            if not question_text:
+                return JsonResponse({'success': False, 'message': 'Question text cannot be empty.'}, status=400)
+                
+            topic = GuidanceTopic.objects.get(id=topic_id)
+            q = AnswerWritingQuestion.objects.create(topic=topic, question_text=question_text)
+            return JsonResponse({'success': True, 'question_id': q.id, 'question_text': q.question_text})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def edit_answer_writing_question(request, question_id):
+    """Superadmin: inline edit the question text of an Answer Writing question."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+        
+    if request.method == 'POST':
+        from .models import AnswerWritingQuestion
+        import json
+        try:
+            data = json.loads(request.body)
+            question_text = data.get('question_text', '').strip()
+            if not question_text:
+                return JsonResponse({'success': False, 'message': 'Question text cannot be empty.'}, status=400)
+                
+            q = AnswerWritingQuestion.objects.get(id=question_id)
+            q.question_text = question_text
+            q.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
+def delete_answer_writing_question(request, question_id):
+    """Superadmin: permanently delete an Answer Writing question and any student submissions."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+        
+    if request.method == 'POST':
+        from .models import AnswerWritingQuestion
+        try:
+            q = AnswerWritingQuestion.objects.get(id=question_id)
+            q.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+@login_required(login_url='login_view')
+def submit_answer_writing(request, question_id):
+    """Candidate: submit answer file or image (limit <= 4MB, unique per question per candidate)."""
+    from .models import AnswerWritingQuestion, AnswerWritingSubmission
+    from django.shortcuts import get_object_or_404
+    
+    question = get_object_or_404(AnswerWritingQuestion, id=question_id)
+    
+    if request.method == 'POST':
+        submitted_file = request.FILES.get('submitted_file')
+        if not submitted_file:
+            return JsonResponse({'success': False, 'message': 'No file uploaded.'}, status=400)
+            
+        # Limit to 4MB
+        if submitted_file.size > 4 * 1024 * 1024:
+            return JsonResponse({'success': False, 'message': 'File size must not exceed 4MB.'}, status=400)
+            
+        submission, created = AnswerWritingSubmission.objects.get_or_create(
+            question=question,
+            user=request.user,
+            defaults={'submitted_file': submitted_file}
+        )
+        if not created:
+            submission.submitted_file = submitted_file
+            submission.save()
+            
+        return JsonResponse({'success': True, 'filename': submitted_file.name})
+        
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+@login_required(login_url='login_view')
+def save_remark(request, submission_id):
+    """Superadmin: write checking feedback remarks and upload checked files, with Gmail notification."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+        
+    from .models import AnswerWritingSubmission
+    from django.shortcuts import get_object_or_404
+    from django.utils import timezone
+    from django.template.loader import render_to_string
+    from django.conf import settings
+    
+    submission = get_object_or_404(AnswerWritingSubmission, id=submission_id)
+    
+    if request.method == 'POST':
+        remark_text = request.POST.get('remark_text', '').strip()
+        remark_file = request.FILES.get('remark_file')
+        
+        submission.remark_text = remark_text
+        if remark_file:
+            if remark_file.size > 4 * 1024 * 1024:
+                return JsonResponse({'success': False, 'message': 'Remark file size must not exceed 4MB.'}, status=400)
+            submission.remark_file = remark_file
+            
+        submission.remarked_at = timezone.now()
+        submission.save()
+        
+        # Email Dispatch Workflow
+        student = submission.user
+        question = submission.question
+        topic = question.topic
+        subject = topic.subject
+        category = subject.category
+        
+        domain = 'https://tapteacher.in' if not settings.DEBUG else 'http://127.0.0.1:8000'
+        feedback_url = f"{domain}/guidance/{category.slug}/subject/{subject.id}/topic/{topic.id}/?tab=answers"
+        
+        context = {
+            'user_name': student.first_name or student.username,
+            'question_text': question.question_text,
+            'remark_text': remark_text,
+            'feedback_url': feedback_url,
+            'has_remark_file': bool(submission.remark_file),
+            'remark_file_url': f"{domain}{submission.remark_file.url}" if submission.remark_file else ''
+        }
+        
+        html_content = render_to_string('core/emails/answer_writing_remark.html', context)
+        text_content = (
+            f"Hi {context['user_name']},\n\n"
+            f"Your submission for the question \"{question.question_text}\" in topic \"{topic.title}\" has been reviewed by the admin.\n\n"
+            f"Remark: {remark_text}\n\n"
+            f"Check your feedback directly here: {feedback_url}"
+        )
+        
+        subject_line = f"New Feedback on your Answer Writing! 📝 ({topic.title})"
+        
+        email_sent = send_notification_email(
+            subject=subject_line,
+            html_content=html_content,
+            text_content=text_content,
+            recipient=student.email,
+            email_type='answer_writing'
+        )
+        
+        return JsonResponse({'success': True, 'email_sent': email_sent})
+        
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+def send_notification_email(subject, html_content, text_content, recipient, email_type='answer_writing'):
+    """Helper: Priority-throttled SMTP email dispatcher with 500/day limit tracking."""
+    from django.utils import timezone
+    from .models import SentEmailLog
+    from django.core.mail import EmailMultiAlternatives
+    from django.conf import settings
+    
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    sent_today_count = SentEmailLog.objects.filter(sent_at__gte=today_start).count()
+    
+    # Strictly respect 500 emails/day threshold
+    if sent_today_count >= 499:
+        return False
+        
+    # Secondary notifications limit at 450 to leave safety buffer for core alerts
+    if email_type == 'answer_writing' and sent_today_count >= 450:
+        return False
+        
+    from_email = getattr(settings, 'EMAIL_HOST_USER', 'tapteacher.in@gmail.com')
+    msg = EmailMultiAlternatives(subject, text_content, f"TapTeacher <{from_email}>", [recipient])
+    msg.attach_alternative(html_content, "text/html")
+    try:
+        msg.send()
+        SentEmailLog.objects.create(email_type=email_type, recipient=recipient)
+        return True
+    except Exception as e:
+        print(f"Error dispatching email notification: {e}")
+        return False
+
+
+@login_required(login_url='login_view')
+def track_material_engagement(request):
+    """API endpoint to track when a candidate opens a PDF or clicks on a description link."""
+    from django.http import JsonResponse
+    from django.shortcuts import get_object_or_404
+    if request.method == 'POST':
+        import json
+        try:
+            data = json.loads(request.body)
+            topic_id = data.get('topic_id')
+            action = data.get('action') # 'pdf' or 'link'
+            
+            if not topic_id or action not in ['pdf', 'link']:
+                return JsonResponse({'success': False, 'message': 'Invalid parameters'}, status=400)
+                
+            from .models import GuidanceTopic, MaterialEngagement
+            topic = get_object_or_404(GuidanceTopic, id=topic_id)
+            
+            engagement, created = MaterialEngagement.objects.get_or_create(
+                user=request.user,
+                topic=topic
+            )
+            
+            if action == 'pdf':
+                engagement.pdf_open_count += 1
+            elif action == 'link':
+                engagement.link_click_count += 1
+                
+            engagement.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
