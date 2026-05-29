@@ -928,7 +928,7 @@
 
                                     <!-- Remarks display or Form -->
                                     <div class="remark-form-wrapper" style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px;">
-                                        <form id="remark-form-{{ sub.id }}" onsubmit="saveRemark(event, {{ sub.id }})">
+                                        <form id="remark-form-{{ sub.id }}" onsubmit="event.preventDefault()">
                                             <div style="font-size: 12px; font-weight: 700; color: #4b5563; margin-bottom: 6px;">Evaluation Remarks:</div>
                                             <textarea name="remark_text" rows="2" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; margin-bottom:10px; font-family: inherit;" placeholder="Write checked remarks here...">{{ sub.remark_text|default:'' }}</textarea>
                                             
@@ -943,7 +943,10 @@
                                                     <a href="{{ sub.remark_file.url }}" target="_blank" style="font-size: 11px; color: #10b981; font-weight: 600; text-decoration: none;">View Checked File</a>
                                                     {% endif %}
                                                 </div>
-                                                <button type="submit" class="btn btn-primary" style="font-size: 12px; padding: 8px 16px; background: #10b981; border: none; cursor: pointer; font-weight: 600;">Save & Notify</button>
+                                                <div style="display: flex; gap: 8px;">
+                                                    <button type="button" onclick="saveRemark(event, {{ sub.id }}, false)" class="btn" style="font-size: 12px; padding: 8px 16px; background: #6b7280; color: white; border: none; cursor: pointer; font-weight: 600; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">Save Only</button>
+                                                    <button type="button" onclick="saveRemark(event, {{ sub.id }}, true)" class="btn" style="font-size: 12px; padding: 8px 16px; background: #10b981; color: white; border: none; cursor: pointer; font-weight: 600; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Save & Notify</button>
+                                                </div>
                                             </div>
                                         </form>
                                     </div>
@@ -1443,15 +1446,22 @@
             });
         }
         
-        // Admin: Save remark and send email notification
-        function saveRemark(event, submissionId) {
+        // Admin: Save remark and conditionally send email notification
+        function saveRemark(event, submissionId, notify) {
             event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
+            const btn = event.currentTarget;
+            const form = document.getElementById(`remark-form-${submissionId}`);
+            if (!form) return;
             
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Saving & Notifying...';
+            const formData = new FormData(form);
+            formData.append('send_notification', notify ? 'true' : 'false');
+            
+            // Disable both buttons in the form
+            const buttons = form.querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+            
+            const originalText = btn.innerText;
+            btn.innerText = notify ? 'Saving & Notifying...' : 'Saving...';
             
             fetch(`/save_remark/${submissionId}/`, {
                 method: 'POST',
@@ -1463,19 +1473,23 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.email_sent ? 'Remark saved and candidate notified via email!' : 'Remark saved, but daily email quota has been reached.');
+                    if (data.notified) {
+                        alert(data.email_sent ? 'Remark saved and candidate notified via email!' : 'Remark saved, but daily email quota has been reached.');
+                    } else {
+                        alert('Remark saved successfully!');
+                    }
                     window.location.reload();
                 } else {
                     alert('Error saving remarks: ' + data.message);
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = 'Save & Notify';
+                    buttons.forEach(b => b.disabled = false);
+                    btn.innerText = originalText;
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert('An unexpected error occurred while saving.');
-                submitBtn.disabled = false;
-                submitBtn.innerText = 'Save & Notify';
+                buttons.forEach(b => b.disabled = false);
+                btn.innerText = originalText;
             });
         }
     </script>

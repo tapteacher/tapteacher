@@ -2677,6 +2677,7 @@ def save_remark(request, submission_id):
     if request.method == 'POST':
         remark_text = request.POST.get('remark_text', '').strip()
         remark_file = request.FILES.get('remark_file')
+        send_notification = request.POST.get('send_notification', 'true') == 'true'
         
         submission.remark_text = remark_text
         if remark_file:
@@ -2687,44 +2688,46 @@ def save_remark(request, submission_id):
         submission.remarked_at = timezone.now()
         submission.save()
         
-        # Email Dispatch Workflow
-        student = submission.user
-        question = submission.question
-        topic = question.topic
-        subject = topic.subject
-        category = subject.category
-        
-        domain = 'https://tapteacher.in' if not settings.DEBUG else 'http://127.0.0.1:8000'
-        feedback_url = f"{domain}/guidance/{category.slug}/subject/{subject.id}/topic/{topic.id}/?tab=answers"
-        
-        context = {
-            'user_name': student.first_name or student.username,
-            'question_text': question.question_text,
-            'remark_text': remark_text,
-            'feedback_url': feedback_url,
-            'has_remark_file': bool(submission.remark_file),
-            'remark_file_url': f"{domain}{submission.remark_file.url}" if submission.remark_file else ''
-        }
-        
-        html_content = render_to_string('core/emails/answer_writing_remark.html', context)
-        text_content = (
-            f"Hi {context['user_name']},\n\n"
-            f"Your submission for the question \"{question.question_text}\" in topic \"{topic.title}\" has been reviewed by the admin.\n\n"
-            f"Remark: {remark_text}\n\n"
-            f"Check your feedback directly here: {feedback_url}"
-        )
-        
-        subject_line = f"New Feedback on your Answer Writing! 📝 ({topic.title})"
-        
-        email_sent = send_notification_email(
-            subject=subject_line,
-            html_content=html_content,
-            text_content=text_content,
-            recipient=student.email,
-            email_type='answer_writing'
-        )
-        
-        return JsonResponse({'success': True, 'email_sent': email_sent})
+        email_sent = False
+        if send_notification:
+            # Email Dispatch Workflow
+            student = submission.user
+            question = submission.question
+            topic = question.topic
+            subject = topic.subject
+            category = subject.category
+            
+            domain = 'https://tapteacher.in' if not settings.DEBUG else 'http://127.0.0.1:8000'
+            feedback_url = f"{domain}/guidance/{category.slug}/subject/{subject.id}/topic/{topic.id}/?tab=answers"
+            
+            context = {
+                'user_name': student.first_name or student.username,
+                'question_text': question.question_text,
+                'remark_text': remark_text,
+                'feedback_url': feedback_url,
+                'has_remark_file': bool(submission.remark_file),
+                'remark_file_url': f"{domain}{submission.remark_file.url}" if submission.remark_file else ''
+            }
+            
+            html_content = render_to_string('core/emails/answer_writing_remark.html', context)
+            text_content = (
+                f"Hi {context['user_name']},\n\n"
+                f"Your submission for the question \"{question.question_text}\" in topic \"{topic.title}\" has been reviewed by the admin.\n\n"
+                f"Remark: {remark_text}\n\n"
+                f"Check your feedback directly here: {feedback_url}"
+            )
+            
+            subject_line = f"New Feedback on your Answer Writing! 📝 ({topic.title})"
+            
+            email_sent = send_notification_email(
+                subject=subject_line,
+                html_content=html_content,
+                text_content=text_content,
+                recipient=student.email,
+                email_type='answer_writing'
+            )
+            
+        return JsonResponse({'success': True, 'email_sent': email_sent, 'notified': send_notification})
         
     return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
 
