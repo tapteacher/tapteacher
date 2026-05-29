@@ -2838,14 +2838,27 @@ def check_smtp_status(request):
     port = getattr(settings, 'EMAIL_PORT', 587)
     host = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com')
     
-    # Fast socket test
-    socket_status = ""
+    # Fast socket test (default/IPv6)
+    socket_status_default = ""
     try:
         s = socket.create_connection((host, port), timeout=3.0)
         s.close()
-        socket_status = "Successfully established socket connection to smtp.gmail.com:587!"
+        socket_status_default = "SUCCESS"
     except Exception as socket_err:
-        socket_status = f"Failed to connect to smtp.gmail.com:587 within 3 seconds: {socket_err}"
+        socket_status_default = f"FAILED: {socket_err}"
+        
+    # Force IPv4 resolution and test
+    ipv4_address = "Could not resolve"
+    socket_status_ipv4 = ""
+    try:
+        ipv4_address = socket.gethostbyname(host)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(3.0)
+        s.connect((ipv4_address, port))
+        s.close()
+        socket_status_ipv4 = f"SUCCESS (connected to {ipv4_address})"
+    except Exception as ipv4_err:
+        socket_status_ipv4 = f"FAILED (to {ipv4_address}): {ipv4_err}"
         
     return JsonResponse({
         'email_host_user': user,
@@ -2853,5 +2866,6 @@ def check_smtp_status(request):
         'email_host_password_masked': pwd_masked,
         'email_port': port,
         'email_host': host,
-        'socket_test': socket_status
+        'socket_test_default': socket_status_default,
+        'socket_test_ipv4': socket_status_ipv4
     })
