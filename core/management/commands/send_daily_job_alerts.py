@@ -129,14 +129,49 @@ class Command(BaseCommand):
             else:
                 subject = f"{len(matched_posts)} New Vacancy Matches just for you! 🎯"
 
-            msg = EmailMultiAlternatives(subject, text_content, f"TapTeacher Alerts <{from_email}>", [user.email])
-            msg.attach_alternative(html_content, "text/html")
+            import os
+            import requests
+            api_key = os.environ.get('BREVO_API_KEY')
             
-            try:
-                msg.send()
-                success_count += 1
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Failed to send to {user.email}: {e}"))
+            if api_key:
+                # Send via Brevo HTTP API
+                url = "https://api.brevo.com/v3/smtp/email"
+                headers = {
+                    "accept": "application/json",
+                    "api-key": api_key,
+                    "content-type": "application/json"
+                }
+                payload = {
+                    "sender": {
+                        "name": "TapTeacher Alerts",
+                        "email": from_email
+                    },
+                    "to": [
+                        {
+                            "email": user.email
+                        }
+                    ],
+                    "subject": subject,
+                    "htmlContent": html_content,
+                    "textContent": text_content
+                }
+                try:
+                    response = requests.post(url, json=payload, headers=headers, timeout=10)
+                    if response.status_code in [200, 201, 202]:
+                        success_count += 1
+                    else:
+                        self.stdout.write(self.style.ERROR(f"Brevo API error for {user.email}: Status {response.status_code}, Response: {response.text}"))
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"Failed to send to {user.email} via Brevo: {e}"))
+            else:
+                # Fallback to local Django SMTP
+                msg = EmailMultiAlternatives(subject, text_content, f"TapTeacher Alerts <{from_email}>", [user.email])
+                msg.attach_alternative(html_content, "text/html")
+                try:
+                    msg.send()
+                    success_count += 1
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"Failed to send to {user.email}: {e}"))
 
         new_posts.update(alert_emails_sent=True)
         self.stdout.write(self.style.SUCCESS(f"Successfully sent {success_count} emails."))

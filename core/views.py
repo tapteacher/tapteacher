@@ -2743,8 +2743,12 @@ def save_remark(request, submission_id):
 
 
 def send_notification_email(subject, html_content, text_content, recipient, email_type='answer_writing'):
-    """Helper: Priority-throttled SMTP email dispatcher with 500/day limit tracking (executed asynchronously)."""
+    """Helper: Priority-throttled email dispatcher with 500/day limit tracking (executed asynchronously).
+    Uses Brevo HTTP API if BREVO_API_KEY is configured in env, falls back to Django SMTP locally.
+    """
     import threading
+    import os
+    import requests
     
     def target_send():
         from django.utils import timezone
@@ -2768,12 +2772,44 @@ def send_notification_email(subject, html_content, text_content, recipient, emai
                 return
                 
             from_email = getattr(settings, 'EMAIL_HOST_USER', 'tapteacher.in@gmail.com')
-            msg = EmailMultiAlternatives(subject, text_content, f"TapTeacher <{from_email}>", [recipient])
-            msg.attach_alternative(html_content, "text/html")
+            api_key = os.environ.get('BREVO_API_KEY')
             
-            msg.send()
-            SentEmailLog.objects.create(email_type=email_type, recipient=recipient)
-            print(f"Email successfully dispatched to {recipient} in background thread.")
+            if api_key:
+                # Send via Brevo HTTP API (Port 443 - not blocked by Render)
+                url = "https://api.brevo.com/v3/smtp/email"
+                headers = {
+                    "accept": "application/json",
+                    "api-key": api_key,
+                    "content-type": "application/json"
+                }
+                payload = {
+                    "sender": {
+                        "name": "TapTeacher",
+                        "email": from_email
+                    },
+                    "to": [
+                        {
+                            "email": recipient
+                        }
+                    ],
+                    "subject": subject,
+                    "htmlContent": html_content,
+                    "textContent": text_content
+                }
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
+                if response.status_code in [200, 201, 202]:
+                    SentEmailLog.objects.create(email_type=email_type, recipient=recipient)
+                    print(f"Email successfully dispatched to {recipient} via Brevo API.")
+                else:
+                    print(f"Brevo API error: Status {response.status_code}, Response: {response.text}")
+            else:
+                # Fallback to local Django SMTP
+                msg = EmailMultiAlternatives(subject, text_content, f"TapTeacher <{from_email}>", [recipient])
+                msg.attach_alternative(html_content, "text/html")
+                msg.send()
+                SentEmailLog.objects.create(email_type=email_type, recipient=recipient)
+                print(f"Email successfully dispatched to {recipient} via local Django SMTP.")
+                
         except Exception as e:
             print(f"Error dispatching email notification in background: {e}")
             import traceback
