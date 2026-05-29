@@ -75,7 +75,4 @@ urlpatterns = [
     
     # Material Engagement Tracking
     path('api/track-material-engagement/', views.track_material_engagement, name='track_material_engagement'),
-    
-    # SMTP Diagnostics
-    path('check_smtp_status/', views.check_smtp_status, name='check_smtp_status'),
 ]
