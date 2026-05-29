@@ -2737,33 +2737,49 @@ def save_remark(request, submission_id):
 
 
 def send_notification_email(subject, html_content, text_content, recipient, email_type='answer_writing'):
-    """Helper: Priority-throttled SMTP email dispatcher with 500/day limit tracking."""
-    from django.utils import timezone
-    from .models import SentEmailLog
-    from django.core.mail import EmailMultiAlternatives
-    from django.conf import settings
+    """Helper: Priority-throttled SMTP email dispatcher with 500/day limit tracking (executed asynchronously)."""
+    import threading
     
-    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    sent_today_count = SentEmailLog.objects.filter(sent_at__gte=today_start).count()
-    
-    # Strictly respect 500 emails/day threshold
-    if sent_today_count >= 499:
-        return False
+    def target_send():
+        from django.utils import timezone
+        from .models import SentEmailLog
+        from django.core.mail import EmailMultiAlternatives
+        from django.conf import settings
+        from django.db import connection
         
-    # Secondary notifications limit at 450 to leave safety buffer for core alerts
-    if email_type == 'answer_writing' and sent_today_count >= 450:
-        return False
-        
-    from_email = getattr(settings, 'EMAIL_HOST_USER', 'tapteacher.in@gmail.com')
-    msg = EmailMultiAlternatives(subject, text_content, f"TapTeacher <{from_email}>", [recipient])
-    msg.attach_alternative(html_content, "text/html")
-    try:
-        msg.send()
-        SentEmailLog.objects.create(email_type=email_type, recipient=recipient)
-        return True
-    except Exception as e:
-        print(f"Error dispatching email notification: {e}")
-        return False
+        try:
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            sent_today_count = SentEmailLog.objects.filter(sent_at__gte=today_start).count()
+            
+            # Strictly respect 500 emails/day threshold
+            if sent_today_count >= 499:
+                print("Email dispatch aborted: 500/day limit reached.")
+                return
+                
+            # Secondary notifications limit at 450 to leave safety buffer for core alerts
+            if email_type == 'answer_writing' and sent_today_count >= 450:
+                print("Email dispatch aborted: answer writing notifications threshold reached.")
+                return
+                
+            from_email = getattr(settings, 'EMAIL_HOST_USER', 'tapteacher.in@gmail.com')
+            msg = EmailMultiAlternatives(subject, text_content, f"TapTeacher <{from_email}>", [recipient])
+            msg.attach_alternative(html_content, "text/html")
+            
+            msg.send()
+            SentEmailLog.objects.create(email_type=email_type, recipient=recipient)
+            print(f"Email successfully dispatched to {recipient} in background thread.")
+        except Exception as e:
+            print(f"Error dispatching email notification in background: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            connection.close()
+
+    # Start sending in a separate background thread so we do not block Gunicorn request worker thread
+    thread = threading.Thread(target=target_send)
+    thread.daemon = True
+    thread.start()
+    return True
 
 
 @login_required(login_url='login_view')
