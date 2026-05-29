@@ -1470,7 +1470,18 @@
                 },
                 body: formData
             })
-            .then(res => res.json())
+            .then(res => {
+                return res.text().then(text => {
+                    if (!res.ok) {
+                        throw new Error(`Server status ${res.status}: ${text.substring(0, 300)}`);
+                    }
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        throw new Error(`Invalid JSON response: ${text.substring(0, 300)}`);
+                    }
+                });
+            })
             .then(data => {
                 if (data.success) {
                     if (data.notified) {
@@ -1491,7 +1502,7 @@
             })
             .catch(err => {
                 console.error(err);
-                alert('An unexpected error occurred while saving.');
+                alert('Error: ' + err.message);
                 buttons.forEach(b => b.disabled = false);
                 btn.innerText = originalText;
             });
