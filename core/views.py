@@ -2825,37 +2825,33 @@ def track_material_engagement(request):
 
 
 def check_smtp_status(request):
-    """Temporary diagnostic endpoint to test and output the exact SMTP connection state & credentials."""
-    from django.core.mail import send_mail
+    """Diagnostic endpoint to inspect settings and perform a fast socket connection test."""
     from django.conf import settings
     from django.http import JsonResponse
-    import os
+    import socket
     
     user = getattr(settings, 'EMAIL_HOST_USER', 'Not Set')
     pwd = getattr(settings, 'EMAIL_HOST_PASSWORD', 'Not Set')
     pwd_len = len(pwd) if pwd else 0
+    pwd_masked = f"{pwd[:2]}...{pwd[-2:]}" if pwd_len > 4 else "Too short/empty"
     
+    port = getattr(settings, 'EMAIL_PORT', 587)
+    host = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com')
+    
+    # Fast socket test
+    socket_status = ""
     try:
-        # Attempt to send a test mail synchronously to capture the exact exception details
-        send_mail(
-            'TapTeacher SMTP Diagnostics',
-            'This is a diagnostic test email to verify credentials and SMTP configuration on the live server.',
-            settings.DEFAULT_FROM_EMAIL,
-            ['tapteacher.in@gmail.com'],
-            fail_silently=False,
-        )
-        return JsonResponse({
-            'status': 'success',
-            'email_host_user': user,
-            'password_length': pwd_len,
-            'message': 'SMTP connection and send succeeded!'
-        })
-    except Exception as e:
-        import traceback
-        return JsonResponse({
-            'status': 'error',
-            'email_host_user': user,
-            'password_length': pwd_len,
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        })
+        s = socket.create_connection((host, port), timeout=3.0)
+        s.close()
+        socket_status = "Successfully established socket connection to smtp.gmail.com:587!"
+    except Exception as socket_err:
+        socket_status = f"Failed to connect to smtp.gmail.com:587 within 3 seconds: {socket_err}"
+        
+    return JsonResponse({
+        'email_host_user': user,
+        'email_host_password_length': pwd_len,
+        'email_host_password_masked': pwd_masked,
+        'email_port': port,
+        'email_host': host,
+        'socket_test': socket_status
+    })
