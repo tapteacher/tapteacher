@@ -2835,37 +2835,32 @@ def check_smtp_status(request):
     pwd_len = len(pwd) if pwd else 0
     pwd_masked = f"{pwd[:2]}...{pwd[-2:]}" if pwd_len > 4 else "Too short/empty"
     
-    port = getattr(settings, 'EMAIL_PORT', 587)
-    host = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com')
+    host = 'smtp.gmail.com'
     
-    # Fast socket test (default/IPv6)
-    socket_status_default = ""
-    try:
-        s = socket.create_connection((host, port), timeout=3.0)
-        s.close()
-        socket_status_default = "SUCCESS"
-    except Exception as socket_err:
-        socket_status_default = f"FAILED: {socket_err}"
-        
-    # Force IPv4 resolution and test
-    ipv4_address = "Could not resolve"
-    socket_status_ipv4 = ""
-    try:
-        ipv4_address = socket.gethostbyname(host)
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(3.0)
-        s.connect((ipv4_address, port))
-        s.close()
-        socket_status_ipv4 = f"SUCCESS (connected to {ipv4_address})"
-    except Exception as ipv4_err:
-        socket_status_ipv4 = f"FAILED (to {ipv4_address}): {ipv4_err}"
-        
+    results = {}
+    for port in [587, 465]:
+        # Test default
+        try:
+            s = socket.create_connection((host, port), timeout=2.0)
+            s.close()
+            results[f'port_{port}_default'] = "SUCCESS"
+        except Exception as err:
+            results[f'port_{port}_default'] = f"FAILED: {err}"
+            
+        # Test IPv4
+        try:
+            ipv4_address = socket.gethostbyname(host)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(2.0)
+            s.connect((ipv4_address, port))
+            s.close()
+            results[f'port_{port}_ipv4'] = f"SUCCESS (connected to {ipv4_address})"
+        except Exception as err:
+            results[f'port_{port}_ipv4'] = f"FAILED: {err}"
+            
     return JsonResponse({
         'email_host_user': user,
         'email_host_password_length': pwd_len,
         'email_host_password_masked': pwd_masked,
-        'email_port': port,
-        'email_host': host,
-        'socket_test_default': socket_status_default,
-        'socket_test_ipv4': socket_status_ipv4
+        'test_results': results
     })
