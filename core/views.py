@@ -2731,7 +2731,7 @@ def save_remark(request, submission_id):
             return JsonResponse({'success': True, 'email_sent': email_sent, 'notified': send_notification})
         except Exception as e:
             import traceback
-            return JsonResponse({'success': False, 'message': str(e), 'traceback': traceback.format_exc()}, status=500)
+            return JsonResponse({'success': False, 'message': str(e), 'traceback': traceback.format_exc()})
             
     return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
 

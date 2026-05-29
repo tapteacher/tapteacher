@@ -1480,7 +1480,11 @@
                     }
                     window.location.reload();
                 } else {
-                    alert('Error saving remarks: ' + data.message);
+                    let errMsg = 'Error saving remarks: ' + data.message;
+                    if (data.traceback) {
+                        errMsg += '\n\nTraceback:\n' + data.traceback;
+                    }
+                    alert(errMsg);
                     buttons.forEach(b => b.disabled = false);
                     btn.innerText = originalText;
                 }
