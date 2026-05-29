@@ -2698,8 +2698,14 @@ def save_remark(request, submission_id):
                 subject = topic.subject
                 category = subject.category
                 
-                domain = 'https://tapteacher.in' if not settings.DEBUG else 'http://127.0.0.1:8000'
+                scheme = 'https' if (request.is_secure() or request.headers.get('x-forwarded-proto') == 'https') else 'http'
+                domain = f"{scheme}://{request.get_host()}"
                 feedback_url = f"{domain}/guidance/{category.slug}/subject/{subject.id}/topic/{topic.id}/?tab=answers"
+                
+                remark_file_url = ''
+                if submission.remark_file:
+                    url = submission.remark_file.url
+                    remark_file_url = url if url.startswith('http') else f"{domain}{url}"
                 
                 context = {
                     'user_name': student.first_name or student.username,
@@ -2707,7 +2713,7 @@ def save_remark(request, submission_id):
                     'remark_text': remark_text,
                     'feedback_url': feedback_url,
                     'has_remark_file': bool(submission.remark_file),
-                    'remark_file_url': f"{domain}{submission.remark_file.url}" if submission.remark_file else ''
+                    'remark_file_url': remark_file_url
                 }
                 
                 html_content = render_to_string('core/emails/answer_writing_remark.html', context)
