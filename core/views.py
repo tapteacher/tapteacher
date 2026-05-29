@@ -2822,3 +2822,40 @@ def track_material_engagement(request):
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
             
     return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+def check_smtp_status(request):
+    """Temporary diagnostic endpoint to test and output the exact SMTP connection state & credentials."""
+    from django.core.mail import send_mail
+    from django.conf import settings
+    from django.http import JsonResponse
+    import os
+    
+    user = getattr(settings, 'EMAIL_HOST_USER', 'Not Set')
+    pwd = getattr(settings, 'EMAIL_HOST_PASSWORD', 'Not Set')
+    pwd_len = len(pwd) if pwd else 0
+    
+    try:
+        # Attempt to send a test mail synchronously to capture the exact exception details
+        send_mail(
+            'TapTeacher SMTP Diagnostics',
+            'This is a diagnostic test email to verify credentials and SMTP configuration on the live server.',
+            settings.DEFAULT_FROM_EMAIL,
+            ['tapteacher.in@gmail.com'],
+            fail_silently=False,
+        )
+        return JsonResponse({
+            'status': 'success',
+            'email_host_user': user,
+            'password_length': pwd_len,
+            'message': 'SMTP connection and send succeeded!'
+        })
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'status': 'error',
+            'email_host_user': user,
+            'password_length': pwd_len,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        })
