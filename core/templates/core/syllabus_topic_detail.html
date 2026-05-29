@@ -1149,6 +1149,19 @@
                     });
                 });
             }
+
+            // Auto switch tab based on URL query parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            if (tabParam) {
+                if (tabParam === 'answers' || tabParam === 'notes') {
+                    switchTab('notes');
+                } else if (tabParam === 'quizzes') {
+                    switchTab('quizzes');
+                } else if (tabParam === 'materials') {
+                    switchTab('materials');
+                }
+            }
         });
 
         // ===== Add MCQ Panel JS =====
