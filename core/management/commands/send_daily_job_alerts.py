@@ -92,21 +92,32 @@ class Command(BaseCommand):
         loyalists.sort(key=lambda x: x[1], reverse=True)
         random.shuffle(newcomers)
 
-        MAX_QUOTA = 499
+        # Count how many emails have already been sent today (both manual remarks and alerts)
+        from core.models import SentEmailLog
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        sent_today = SentEmailLog.objects.filter(sent_at__gte=today_start).count()
+        
+        # Absolute limit is 295/day. Max alerts sent in one run is capped at 250
+        # to ensure there is always a buffer left for manual remarks.
+        MAX_QUOTA = max(0, min(250, 295 - sent_today))
+        
         final_list = []
-
-        if len(loyalists) >= 350:
-            final_list.extend(loyalists[:350])
-            remaining_quota = MAX_QUOTA - 350
+        
+        # Allocate 70% of the dynamic quota to loyalists, the rest to newcomers
+        loyalist_limit = int(MAX_QUOTA * 0.7)
+        
+        if len(loyalists) >= loyalist_limit:
+            final_list.extend(loyalists[:loyalist_limit])
+            remaining_quota = MAX_QUOTA - loyalist_limit
             final_list.extend(newcomers[:remaining_quota])
         else:
             final_list.extend(loyalists)
             remaining_quota = MAX_QUOTA - len(loyalists)
             final_list.extend(newcomers[:remaining_quota])
-
+            
         final_list = final_list[:MAX_QUOTA]
-
-        self.stdout.write(f"Sending emails to {len(final_list)} users after 499 cutoff limit.")
+        self.stdout.write(f"Emails sent today so far: {sent_today}. Dynamic MAX_QUOTA for alerts set to: {MAX_QUOTA}")
+        self.stdout.write(f"Sending emails to {len(final_list)} users.")
 
         # 4. Dispatch Emails
         from_email = getattr(settings, 'EMAIL_HOST_USER', 'tapteacher.in@gmail.com')
@@ -159,6 +170,7 @@ class Command(BaseCommand):
                     response = requests.post(url, json=payload, headers=headers, timeout=10)
                     if response.status_code in [200, 201, 202]:
                         success_count += 1
+                        SentEmailLog.objects.create(email_type='vacancy', recipient=user.email)
                     else:
                         self.stdout.write(self.style.ERROR(f"Brevo API error for {user.email}: Status {response.status_code}, Response: {response.text}"))
                 except Exception as e:
@@ -170,6 +182,7 @@ class Command(BaseCommand):
                 try:
                     msg.send()
                     success_count += 1
+                    SentEmailLog.objects.create(email_type='vacancy', recipient=user.email)
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"Failed to send to {user.email}: {e}"))
 

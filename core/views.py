@@ -2761,14 +2761,9 @@ def send_notification_email(subject, html_content, text_content, recipient, emai
             today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
             sent_today_count = SentEmailLog.objects.filter(sent_at__gte=today_start).count()
             
-            # Strictly respect 500 emails/day threshold
-            if sent_today_count >= 499:
-                print("Email dispatch aborted: 500/day limit reached.")
-                return
-                
-            # Secondary notifications limit at 450 to leave safety buffer for core alerts
-            if email_type == 'answer_writing' and sent_today_count >= 450:
-                print("Email dispatch aborted: answer writing notifications threshold reached.")
+            # Prioritize manual remarks: only block if we are right at the 295 absolute limit
+            if sent_today_count >= 295:
+                print("Email dispatch aborted: 295/day absolute limit reached.")
                 return
                 
             from_email = getattr(settings, 'EMAIL_HOST_USER', 'tapteacher.in@gmail.com')
