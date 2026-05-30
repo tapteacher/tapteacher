@@ -1454,11 +1454,24 @@ def syllabus_landing(request):
 
 @login_required(login_url='login_view')
 def syllabus_category_view(request, category_slug):
-    # Update Last Visit Logic Here (Stop Blinking after visiting category)
-    response = None
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.db.models import Q
+
+    # Fetch user's PREVIOUS last visit time before updating it
+    last_visit = None
+    if request.user.is_authenticated:
+        try:
+            last_visit = request.user.verification.last_syllabus_visit
+        except:
+            pass
+
+    if not last_visit:
+        last_visit = timezone.now() - timedelta(days=7)
+
+    # Now update the last visit timestamp
     if request.user.is_authenticated and not request.GET.get('view_as'):
         try:
-            from django.utils import timezone
             v = request.user.verification
             v.last_syllabus_visit = timezone.now()
             v.save()
@@ -1488,22 +1501,23 @@ def syllabus_category_view(request, category_slug):
         # Check topics visibility
         topics = sub.topics.all()
         has_visible = False
+        sub_should_blink = False
         for t in topics:
-            if t.is_for_everyone:
-                has_visible = True
-                break
-            # Check visibility for target user (or superuser if not simulating)
-            if t.assigned_users.filter(id=target_user_id).exists():
-                has_visible = True
-                break
-            # If standard superuser view (no view_as), show everything?
-            # User request implies they want to see user's perspective when "view_as" is set.
-            # If no view_as, superuser should probably see all.
+            is_visible = False
             if request.user.is_superuser and not view_as_id:
+                is_visible = True
+            elif t.is_for_everyone:
+                is_visible = True
+            elif t.assigned_users.filter(id=target_user_id).exists():
+                is_visible = True
+                
+            if is_visible:
                 has_visible = True
-                break
+                if t.created_at and t.created_at > last_visit:
+                    sub_should_blink = True
         
         if has_visible:
+            sub.should_blink = sub_should_blink
             visible_subjects.append(sub)
 
     return render(request, 'core/syllabus_subjects.html', {
@@ -2280,11 +2294,16 @@ def syllabus_topic_mcq_view(request, category_slug, subject_id, topic_id):
     """Renders the quiz interface for an MCQ set with a countdown timer."""
     from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, MCQSet
     from django.shortcuts import get_object_or_404, render
+    from django.http import HttpResponseForbidden
 
     category = get_object_or_404(GuidanceCategory, slug=category_slug)
     subject = get_object_or_404(GuidanceSubject, id=subject_id, category=category)
     topic = get_object_or_404(GuidanceTopic, id=topic_id, subject=subject)
     mcq_set = get_object_or_404(MCQSet, topic=topic)
+
+    is_manage_mode = request.GET.get('manage') == 'true'
+    if is_manage_mode and not request.user.is_superuser:
+        return HttpResponseForbidden("Only superadmins can access management mode.")
 
     # Convert questions and options to list for template
     questions = mcq_set.questions.all().prefetch_related('options')
@@ -2295,6 +2314,7 @@ def syllabus_topic_mcq_view(request, category_slug, subject_id, topic_id):
         'topic': topic,
         'mcq_set': mcq_set,
         'questions': questions,
+        'is_manage_mode': is_manage_mode,
     })
 
 

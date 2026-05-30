@@ -228,6 +228,28 @@
         .submit-btn:hover {
             background: #4338ca;
         }
+
+        /* Blink Animation */
+        @keyframes blink-red {
+            0% {
+                background-color: #f9f9f9;
+                border-color: #eee;
+            }
+
+            50% {
+                background-color: #ffe6e6;
+                border-color: #ff4444;
+            }
+
+            100% {
+                background-color: #f9f9f9;
+                border-color: #eee;
+            }
+        }
+
+        .blink-red {
+            animation: blink-red 1.5s infinite;
+        }
     </style>
 </head>
 
@@ -248,7 +270,7 @@
         <div class="subject-grid">
             {% for sub in subjects %}
             <a href="{% url 'syllabus_subject' category.slug sub.id %}{% if view_as_user %}?view_as={{ view_as_user }}{% endif %}"
-                class="subject-card">
+                class="subject-card {% if sub.should_blink %}blink-red{% endif %}">
                 {{ sub.name }}
             </a>
             {% endfor %}

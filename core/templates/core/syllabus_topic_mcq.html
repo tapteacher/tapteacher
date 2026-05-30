@@ -327,9 +327,15 @@
         .stat-lbl {
             font-size: 12px;
             color: var(--text-muted);
-            font-weight: 600;
             margin-top: 4px;
         }
+
+        {% if is_manage_mode %}
+        .options-list {
+            pointer-events: none;
+            opacity: 0.85;
+        }
+        {% endif %}
     </style>
 </head>
  
@@ -338,21 +344,30 @@
         
         <!-- Back Navigation Option -->
         <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            {% if is_manage_mode %}
+            <a href="{% url 'syllabus_topic_detail' category.slug subject.id topic.id %}" style="display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); cursor: pointer;" onmouseover="this.style.color='var(--primary)'; this.style.borderColor='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'; this.style.borderColor='var(--border-color)'">
+                ← Exit & Return to Topic Detail
+            </a>
+            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">🔧 Management Mode — no timer, edits save instantly</span>
+            {% else %}
             <button onclick="exitAndSave()" style="display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); cursor: pointer;" onmouseover="this.style.color='var(--primary)'; this.style.borderColor='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'; this.style.borderColor='var(--border-color)'">
                 ← Exit & Save Progress
             </button>
             <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">⚡ Progress auto-saved — resume anytime</span>
+            {% endif %}
         </div>
         
         <!-- Top bar Info -->
         <div class="quiz-header">
             <div class="topic-info">
                 <p>{{ subject.name }}</p>
-                <h1>{{ topic.title }} Quiz</h1>
+                <h1>{{ topic.title }} {% if is_manage_mode %}MCQ Set Manager{% else %}Quiz{% endif %}</h1>
             </div>
+            {% if not is_manage_mode %}
             <div class="timer-box" id="timer-box">
                 ⏱️ <span id="timer-display">00:00</span>
             </div>
+            {% endif %}
         </div>
 
         <!-- Progress bar -->
@@ -364,8 +379,50 @@
         <form id="quiz-form" onsubmit="event.preventDefault();">
             {% for q in questions %}
             <div class="question-card" id="q-card-{{ forloop.counter0 }}" data-question-id="{{ q.id }}">
-                <div class="question-number">Question {{ forloop.counter }} of {{ questions|length }}</div>
-                <div class="question-text">{{ q.question_text }}</div>
+                
+                <!-- Question Header -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 4px;">
+                    <div class="question-number" style="margin-bottom: 0;">Question {{ forloop.counter }} of {{ questions|length }}</div>
+                    {% if request.user.is_superuser %}
+                    <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                        <button type="button" onclick="openQuizMcqEditor({{ forloop.counter0 }}, {{ q.id }})" style="background: #f0f4ff; border: 1px solid #c7d2fe; color: #4338ca; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='#f0f4ff'">
+                            ✏️ Edit MCQ
+                        </button>
+                        <button type="button" onclick="deleteQuizMcq({{ forloop.counter0 }}, {{ q.id }})" style="background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#ffe4e6'" onmouseout="this.style.background='#fff1f2'">
+                            🗑️ Delete MCQ
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Question text (display mode) -->
+                <div class="question-text" id="mcq-q-text-{{ q.id }}">{{ q.question_text }}</div>
+
+                {% if request.user.is_superuser %}
+                <!-- Inline Edit Panel (hidden by default) -->
+                <div id="mcq-edit-panel-{{ q.id }}" class="mcq-edit-panel" style="display:none; background:#fafafa; border:1px solid #c7d2fe; border-radius:10px; padding:18px; margin-top:12px; margin-bottom:16px;">
+                    <div style="font-size:13px; font-weight:700; color:#4338ca; margin-bottom:10px;">Edit MCQ Question</div>
+                    <input type="text" id="mcq-edit-q-{{ q.id }}" value="{{ q.question_text|escapejs }}"
+                        style="width:100%; padding:10px; border:1px solid #c7d2fe; border-radius:6px; font-size:14px; margin-bottom:12px; box-sizing:border-box; font-family:inherit;">
+                    <div style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px;">Options (mark correct one):</div>
+                    <div id="mcq-edit-opts-{{ q.id }}" style="display:flex; flex-direction:column; gap:8px;">
+                        {% for opt in q.options.all %}
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-weight:700; font-size:13px; color:#4338ca; min-width:20px;">{{ opt.label }}</span>
+                            <input type="text" id="mcq-opt-{{ q.id }}-{{ forloop.counter0 }}" value="{{ opt.option_text|escapejs }}"
+                                style="flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:13px;">
+                            <label style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; color:#059669; font-weight:600; white-space:nowrap;">
+                                <input type="radio" name="mcq-correct-{{ q.id }}" value="{{ opt.label }}" {% if opt.is_correct %}checked{% endif %}> ✓ Correct
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+                        <button type="button" onclick="closeQuizMcqEditor({{ forloop.counter0 }}, {{ q.id }})" style="padding:8px 16px; border:1px solid #ddd; background:white; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; color:#64748b;">Cancel</button>
+                        <button type="button" onclick="saveQuizMcqEdit({{ forloop.counter0 }}, {{ q.id }}, {{ q.options.count }})" style="padding:8px 16px; border:none; background:#4338ca; color:white; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer;">Save Changes</button>
+                    </div>
+                </div>
+                {% endif %}
                 
                 <div class="options-list">
                     {% for opt in q.options.all %}
@@ -443,6 +500,7 @@
 
     <script>
         // Quiz states
+        const isManageMode = {{ is_manage_mode|yesno:"true,false" }};
         const totalQuestions = {{ questions|length }};
         let currentIdx = 0;
         let selectedAnswers = {}; // Map of QuestionIdx -> OptionID
@@ -456,6 +514,7 @@
         const storageKey = `quiz_state_{{ request.user.username }}_{{ topic.id }}_{{ mcq_set.id }}`;
 
         function saveQuizState() {
+            if (isManageMode) return;
             try {
                 const state = {
                     currentIdx: currentIdx,
@@ -470,6 +529,7 @@
         }
 
         function loadQuizState() {
+            if (isManageMode) return false;
             try {
                 const saved = localStorage.getItem(storageKey);
                 if (saved) {
@@ -493,6 +553,7 @@
         }
 
         function clearQuizState() {
+            if (isManageMode) return;
             try {
                 localStorage.removeItem(storageKey);
             } catch (e) {
@@ -502,6 +563,11 @@
 
         // Init Quiz
         document.addEventListener('DOMContentLoaded', () => {
+            if (isManageMode) {
+                showQuestion(currentIdx);
+                return;
+            }
+
             const resumed = loadQuizState();
             
             // Show current question
@@ -554,21 +620,39 @@
             // Navigation states
             document.getElementById('btn-prev').disabled = (idx === 0);
 
-            // Hide Next on last question; Submit always visible
-            if (idx === totalQuestions - 1) {
-                document.getElementById('btn-next').style.display = 'none';
+            if (isManageMode) {
+                document.getElementById('btn-submit').style.display = 'none';
+                const nextBtn = document.getElementById('btn-next');
+                if (idx === totalQuestions - 1) {
+                    nextBtn.textContent = 'Finish Management ✓';
+                    nextBtn.className = 'btn btn-success';
+                    nextBtn.setAttribute('onclick', 'exitAndSave()');
+                    nextBtn.style.display = 'inline-flex';
+                } else {
+                    nextBtn.textContent = 'Next →';
+                    nextBtn.className = 'btn btn-primary';
+                    nextBtn.setAttribute('onclick', 'nextQuestion()');
+                    nextBtn.style.display = 'inline-flex';
+                }
             } else {
-                document.getElementById('btn-next').style.display = 'inline-flex';
+                // Hide Next on last question; Submit always visible
+                if (idx === totalQuestions - 1) {
+                    document.getElementById('btn-next').style.display = 'none';
+                } else {
+                    document.getElementById('btn-next').style.display = 'inline-flex';
+                }
+                // Submit is ALWAYS visible so user can submit at any time
+                document.getElementById('btn-submit').style.display = 'inline-flex';
             }
-            // Submit is ALWAYS visible so user can submit at any time
-            document.getElementById('btn-submit').style.display = 'inline-flex';
 
             currentIdx = idx;
             saveQuizState();
         }
 
         function exitAndSave() {
-            saveQuizState(); // Persist current state to localStorage
+            if (!isManageMode) {
+                saveQuizState(); // Persist current state to localStorage
+            }
             window.location.href = "{% url 'syllabus_topic_detail' category.slug subject.id topic.id %}";
         }
 
@@ -585,6 +669,7 @@
         }
 
         function selectOption(qIdx, optionId, element) {
+            if (isManageMode) return;
             // Save answer
             selectedAnswers[qIdx] = optionId;
 
@@ -595,6 +680,132 @@
 
             saveQuizState();
         }
+
+        {% if request.user.is_superuser %}
+        function openQuizMcqEditor(idx, mcqId) {
+            // Pause timer if running (and not in manage mode)
+            if (!isManageMode && timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                const timerBox = document.getElementById('timer-box');
+                if (timerBox) {
+                    timerBox.style.opacity = '0.5';
+                    timerBox.title = 'Timer paused while editing';
+                }
+            }
+
+            const card = document.getElementById('q-card-' + idx);
+            if (card) {
+                const qText = document.getElementById(`mcq-q-text-${mcqId}`);
+                const optList = card.querySelector('.options-list');
+                const panel = document.getElementById(`mcq-edit-panel-${mcqId}`);
+                
+                if (qText) qText.style.display = 'none';
+                if (optList) optList.style.display = 'none';
+                if (panel) panel.style.display = 'block';
+            }
+        }
+
+        function closeQuizMcqEditor(idx, mcqId) {
+            const card = document.getElementById('q-card-' + idx);
+            if (card) {
+                const qText = document.getElementById(`mcq-q-text-${mcqId}`);
+                const optList = card.querySelector('.options-list');
+                const panel = document.getElementById(`mcq-edit-panel-${mcqId}`);
+                
+                if (qText) qText.style.display = 'block';
+                if (optList) optList.style.display = 'flex';
+                if (panel) panel.style.display = 'none';
+            }
+
+            // Resume timer if not in manage mode and timer was stopped
+            if (!isManageMode && !timerInterval) {
+                startTimer();
+                const timerBox = document.getElementById('timer-box');
+                if (timerBox) {
+                    timerBox.style.opacity = '1';
+                    timerBox.title = '';
+                }
+            }
+        }
+
+        function saveQuizMcqEdit(idx, mcqId, optionCount) {
+            const questionEl = document.getElementById(`mcq-edit-q-${mcqId}`);
+            const question_text = questionEl ? questionEl.value.trim() : '';
+            if (!question_text) {
+                alert('Question text cannot be empty.');
+                return;
+            }
+
+            const options = [];
+            for (let i = 0; i < optionCount; i++) {
+                const optEl = document.getElementById(`mcq-opt-${mcqId}-${i}`);
+                options.push(optEl ? optEl.value.trim() : '');
+            }
+
+            const correctRadio = document.querySelector(`input[name="mcq-correct-${mcqId}"]:checked`);
+            const correct_label = correctRadio ? correctRadio.value : 'A';
+
+            fetch(`/edit_individual_mcq/${mcqId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ question_text, options, correct_label })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Update DOM content immediately
+                    const card = document.getElementById('q-card-' + idx);
+                    if (card) {
+                        const qText = document.getElementById(`mcq-q-text-${mcqId}`);
+                        if (qText) qText.textContent = question_text;
+                        
+                        const optionSpans = card.querySelectorAll('.options-list .option-item span:last-child');
+                        optionSpans.forEach((span, i) => {
+                            if (options[i] !== undefined) {
+                                span.textContent = options[i];
+                            }
+                        });
+                    }
+
+                    closeQuizMcqEditor(idx, mcqId);
+                    alert('MCQ updated successfully!');
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('An unexpected error occurred.');
+            });
+        }
+
+        function deleteQuizMcq(idx, mcqId) {
+            if (!confirm('Are you sure you want to permanently delete this MCQ question? This action cannot be undone.')) return;
+
+            fetch(`/delete_individual_mcq/${mcqId}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('MCQ deleted successfully!');
+                    clearQuizState();
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('An unexpected error occurred.');
+            });
+        }
+        {% endif %}
 
         // Timer controller
         function startTimer() {
