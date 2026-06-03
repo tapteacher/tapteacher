@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     SiteSettings, Institute, InstituteImage, Vacancy, VacancyPost, UserApplication,
-    GuidanceCategory, GuidanceSubject, GuidanceTopic, MCQSet, MCQ, MCQOption
+    GuidanceCategory, GuidanceSubject, GuidanceTopic, MCQSet, MCQ, MCQOption, AnswerWritingQuestion
 )
 
 admin.site.register(SiteSettings)
@@ -61,9 +61,15 @@ class GuidanceSubjectAdmin(admin.ModelAdmin):
     list_display = ('name', 'category')
     list_filter = ('category',)
 
+class AnswerWritingQuestionInline(admin.TabularInline):
+    model = AnswerWritingQuestion
+    extra = 1
+
 @admin.register(GuidanceTopic)
 class GuidanceTopicAdmin(admin.ModelAdmin):
     list_display = ('title', 'subject', 'is_for_everyone', 'created_at')
     list_filter = ('subject', 'is_for_everyone')
-    inlines = [MCQSetInline]
+    inlines = [MCQSetInline, AnswerWritingQuestionInline]
+
+admin.site.register(AnswerWritingQuestion)
 
