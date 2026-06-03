@@ -1324,13 +1324,32 @@
                     <!-- ===== ANSWER WRITING QUESTIONS SECTION ===== -->
                     <div style="background:#fdf4ff; padding:16px; border-radius:8px; border:1px solid #fbcfe8; margin-top:15px;">
                         <div style="font-weight:600; margin-bottom:12px; color:#9d174d; font-size:14px;">📝 Questions for Answer Writing <span style="font-weight:400; font-size:12px; color:#888;">(Optional)</span></div>
-                        <div id="answer-questions-container-${id}" style="display:flex; flex-direction:column; gap:10px;">
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <input type="text" name="topic_answer_questions_${id}[]" placeholder="Enter answer writing question..." style="flex:1; padding:10px; border:1px solid #fbcfe8; border-radius:6px; font-size:13px; box-sizing:border-box;">
-                                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:14px; padding:5px;" title="Remove Question">✕</button>
-                            </div>
+                        
+                        <div style="display:flex; gap:25px; margin-bottom:14px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
+                                <input type="radio" name="topic_answer_mode_${id}" value="manual" checked onchange="toggleAnswerMode(${id})"> ✏️ Manual Entry
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
+                                <input type="radio" name="topic_answer_mode_${id}" value="paste" onchange="toggleAnswerMode(${id})"> 📋 Paste Questions (One per line)
+                            </label>
                         </div>
-                        <button type="button" onclick="addAnswerQuestionField(${id})" style="margin-top:12px; padding:8px 16px; background:white; border:1px solid #9d174d; border-radius:6px; cursor:pointer; font-size:13px; color:#9d174d; font-weight:600; transition: all 0.2s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">+ Add Question</button>
+
+                        <!-- Manual Entry Mode -->
+                        <div id="answer-manual-${id}">
+                            <div id="answer-questions-container-${id}" style="display:flex; flex-direction:column; gap:10px;">
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="text" name="topic_answer_questions_${id}[]" placeholder="Enter answer writing question..." style="flex:1; padding:10px; border:1px solid #fbcfe8; border-radius:6px; font-size:13px; box-sizing:border-box;">
+                                    <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:14px; padding:5px;" title="Remove Question">✕</button>
+                                </div>
+                            </div>
+                            <button type="button" onclick="addAnswerQuestionField(${id})" style="margin-top:12px; padding:8px 16px; background:white; border:1px solid #9d174d; border-radius:6px; cursor:pointer; font-size:13px; color:#9d174d; font-weight:600; transition: all 0.2s;" onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='white'">+ Add Question</button>
+                        </div>
+
+                        <!-- Paste Mode -->
+                        <div id="answer-paste-${id}" style="display:none;">
+                            <label style="font-size:13px; font-weight:600; display:block; margin-bottom:8px;">Paste Questions (One per line):</label>
+                            <textarea name="topic_answer_questions_${id}" rows="6" style="width:100%; font-size:13px; border:1px solid #fbcfe8; border-radius:6px; padding:10px; box-sizing:border-box; background:#fff; font-family:inherit; line-height:1.5;" placeholder="What is trade policy?&#10;Describe the Second Five Year Plan.&#10;Explain import substitution."></textarea>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1342,6 +1361,12 @@
             document.getElementById(`mcq-timer-${id}`).style.display = (mode !== 'none') ? 'block' : 'none';
             document.getElementById(`mcq-ai-${id}`).style.display   = (mode === 'ai')     ? 'block' : 'none';
             document.getElementById(`mcq-manual-${id}`).style.display = (mode === 'manual') ? 'block' : 'none';
+        }
+
+        function toggleAnswerMode(id) {
+            const mode = document.querySelector(`input[name="topic_answer_mode_${id}"]:checked`).value;
+            document.getElementById(`answer-manual-${id}`).style.display = (mode === 'manual') ? 'block' : 'none';
+            document.getElementById(`answer-paste-${id}`).style.display  = (mode === 'paste')  ? 'block' : 'none';
         }
 
         function addAnswerQuestionField(topicId) {

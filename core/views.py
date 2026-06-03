@@ -902,7 +902,7 @@ def admin_dashboard(request):
                                     print(traceback.format_exc())
 
                         # ===== Save Answer Writing Section =====
-                        answer_questions_list = request.POST.getlist(f'topic_answer_questions_{i}[]')
+                        answer_questions_list = [q.strip() for q in request.POST.getlist(f'topic_answer_questions_{i}[]') if q.strip()]
                         if not answer_questions_list:
                             raw_text = request.POST.get(f'topic_answer_questions_{i}', '').strip()
                             if raw_text:
