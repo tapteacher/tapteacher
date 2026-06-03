@@ -2543,16 +2543,26 @@ def edit_individual_mcq(request, mcq_id):
             mcq.question_text = question_text
             mcq.save()
             
-            # Rebuild options to prevent inconsistencies
-            mcq.options.all().delete()
+            # Update options in-place to preserve IDs and avoid breaking student attempt answers
+            existing_options = list(mcq.options.all())
             for idx, opt_text in enumerate(options):
                 label = chr(65 + idx)
-                MCQOption.objects.create(
-                    mcq=mcq,
-                    label=label,
-                    option_text=opt_text.strip(),
-                    is_correct=(label == correct_label)
-                )
+                if idx < len(existing_options):
+                    opt = existing_options[idx]
+                    opt.label = label
+                    opt.option_text = opt_text.strip()
+                    opt.is_correct = (label == correct_label)
+                    opt.save()
+                else:
+                    MCQOption.objects.create(
+                        mcq=mcq,
+                        label=label,
+                        option_text=opt_text.strip(),
+                        is_correct=(label == correct_label)
+                    )
+            if len(existing_options) > len(options):
+                for opt in existing_options[len(options):]:
+                    opt.delete()
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)

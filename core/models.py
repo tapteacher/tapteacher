@@ -268,6 +268,35 @@ class MCQAttempt(models.Model):
             return f"{mins}m {remaining_secs}s"
         return f"{remaining_secs}s"
 
+    def recalculate_score(self):
+        """
+        Recalculates the correct_count, wrong_count, and skipped_count 
+        based on current MCQOption is_correct states.
+        """
+        correct_cnt = 0
+        wrong_cnt = 0
+        skipped_cnt = 0
+        
+        answers = self.answers.all().select_related('mcq', 'selected_option')
+        for ans in answers:
+            if ans.selected_option:
+                if ans.selected_option.is_correct:
+                    ans.is_correct = True
+                    correct_cnt += 1
+                else:
+                    ans.is_correct = False
+                    wrong_cnt += 1
+            else:
+                ans.is_correct = False
+                skipped_cnt += 1
+            ans.save()
+            
+        self.total_questions = answers.count()
+        self.correct_count = correct_cnt
+        self.wrong_count = wrong_cnt
+        self.skipped_count = skipped_cnt
+        self.save()
+
     def __str__(self):
         return (
             f"{self.user.username} — {self.mcq_set.topic.title} "
@@ -517,3 +546,31 @@ class MaterialEngagement(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.topic.title} (PDFs: {self.pdf_open_count}, Links: {self.link_click_count})"
+
+
+# ─────────────────────────────────────────
+#  MCQ Re-scoring Signals
+# ─────────────────────────────────────────
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+
+@receiver(post_save, sender=MCQOption)
+@receiver(post_delete, sender=MCQOption)
+def handle_option_change(sender, instance, **kwargs):
+    try:
+        mcq = instance.mcq
+        if mcq and mcq.mcq_set:
+            for attempt in mcq.mcq_set.attempts.all():
+                attempt.recalculate_score()
+    except Exception as e:
+        print("Error recalculating attempts on option change:", e)
+
+@receiver(post_delete, sender=MCQ)
+def handle_mcq_delete(sender, instance, **kwargs):
+    try:
+        mcq_set = instance.mcq_set
+        if mcq_set:
+            for attempt in mcq_set.attempts.all():
+                attempt.recalculate_score()
+    except Exception as e:
+        print("Error recalculating attempts on MCQ delete:", e)
