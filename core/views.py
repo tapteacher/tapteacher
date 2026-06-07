@@ -902,8 +902,11 @@ def admin_dashboard(request):
                                     print(traceback.format_exc())
 
                         # ===== Save Answer Writing Section =====
-                        answer_questions_list = [q.strip() for q in request.POST.getlist(f'topic_answer_questions_{i}[]') if q.strip()]
-                        if not answer_questions_list:
+                        answer_mode = request.POST.get(f'topic_answer_mode_{i}', 'manual')
+                        answer_questions_list = []
+                        if answer_mode == 'manual':
+                            answer_questions_list = [q.strip() for q in request.POST.getlist(f'topic_answer_questions_{i}[]') if q.strip()]
+                        elif answer_mode == 'paste':
                             raw_text = request.POST.get(f'topic_answer_questions_{i}', '').strip()
                             if raw_text:
                                 answer_questions_list = [q.strip() for q in raw_text.split('\n') if q.strip()]
@@ -1852,7 +1855,15 @@ def delete_topic(request, topic_id):
     category_slug = topic.subject.category.slug
 
     if request.method == 'POST':
-        topic.delete()
+        from django.db.models.signals import post_delete
+        from .models import handle_option_change, handle_mcq_delete, MCQOption, MCQ
+        post_delete.disconnect(handle_option_change, sender=MCQOption)
+        post_delete.disconnect(handle_mcq_delete, sender=MCQ)
+        try:
+            topic.delete()
+        finally:
+            post_delete.connect(handle_option_change, sender=MCQOption)
+            post_delete.connect(handle_mcq_delete, sender=MCQ)
         messages.success(request, 'Topic deleted successfully.')
         from django.urls import reverse
         url = reverse('syllabus_subject', kwargs={'category_slug': category_slug, 'subject_id': subject_id})
@@ -1882,7 +1893,15 @@ def delete_category(request, category_id):
 
     if request.method == 'POST':
         cat_name = category.name
-        category.delete()  # cascades to subjects → topics → files / MCQSets / attempts / notes
+        from django.db.models.signals import post_delete
+        from .models import handle_option_change, handle_mcq_delete, MCQOption, MCQ
+        post_delete.disconnect(handle_option_change, sender=MCQOption)
+        post_delete.disconnect(handle_mcq_delete, sender=MCQ)
+        try:
+            category.delete()  # cascades to subjects → topics → files / MCQSets / attempts / notes
+        finally:
+            post_delete.connect(handle_option_change, sender=MCQOption)
+            post_delete.connect(handle_mcq_delete, sender=MCQ)
         messages.success(request, f"Category \'{cat_name}\' and all its content has been deleted.")
         return redirect('syllabus_landing')
 
@@ -2005,7 +2024,15 @@ def delete_mcq_from_topic(request, topic_id):
         return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
 
     if request.method == 'POST':
-        mcq_set.delete()
+        from django.db.models.signals import post_delete
+        from .models import handle_option_change, handle_mcq_delete, MCQOption, MCQ
+        post_delete.disconnect(handle_option_change, sender=MCQOption)
+        post_delete.disconnect(handle_mcq_delete, sender=MCQ)
+        try:
+            mcq_set.delete()
+        finally:
+            post_delete.connect(handle_option_change, sender=MCQOption)
+            post_delete.connect(handle_mcq_delete, sender=MCQ)
         messages.success(request, f'MCQ Set for "{topic.title}" has been deleted successfully.')
         return redirect('syllabus_topic_detail', category_slug=category_slug, subject_id=subject_id, topic_id=topic_id)
 

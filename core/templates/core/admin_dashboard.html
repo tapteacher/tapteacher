@@ -1354,6 +1354,7 @@
                 </div>
             `;
             container.appendChild(box);
+            toggleAnswerMode(id);
         }
 
         function toggleMcqMode(id) {
@@ -1365,8 +1366,19 @@
 
         function toggleAnswerMode(id) {
             const mode = document.querySelector(`input[name="topic_answer_mode_${id}"]:checked`).value;
-            document.getElementById(`answer-manual-${id}`).style.display = (mode === 'manual') ? 'block' : 'none';
-            document.getElementById(`answer-paste-${id}`).style.display  = (mode === 'paste')  ? 'block' : 'none';
+            const manualDiv = document.getElementById(`answer-manual-${id}`);
+            const pasteDiv = document.getElementById(`answer-paste-${id}`);
+            if (mode === 'manual') {
+                manualDiv.style.display = 'block';
+                pasteDiv.style.display = 'none';
+                manualDiv.querySelectorAll('input').forEach(inp => inp.disabled = false);
+                pasteDiv.querySelectorAll('textarea').forEach(ta => ta.disabled = true);
+            } else {
+                manualDiv.style.display = 'none';
+                pasteDiv.style.display = 'block';
+                manualDiv.querySelectorAll('input').forEach(inp => inp.disabled = true);
+                pasteDiv.querySelectorAll('textarea').forEach(ta => ta.disabled = false);
+            }
         }
 
         function addAnswerQuestionField(topicId) {
