@@ -717,208 +717,216 @@ def admin_dashboard(request):
         # Handle "Upload Syllabus" submission
         elif 'upload_syllabus' in request.POST:
             try:
-                from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, GuidanceTopicFile, User
-                from django.utils.text import slugify
-                
-                target_audience = request.POST.get('target_audience')
-                category_input = request.POST.get('guidance_category', '').strip()
-                subject_name = request.POST.get('subject_name')
-                
-                # Find or Create Category
-                if category_input:
-                    category_slug = slugify(category_input)
-                    if not category_slug:
-                        category_slug = "other"
+                from django.db import transaction
+                with transaction.atomic():
+                    from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, GuidanceTopicFile, User
+                    from django.utils.text import slugify
                     
-                    # Ensure name display is neat (e.g. "PRT", "Librarian")
-                    category_name = category_input
-                    if category_slug in ['prt', 'tgt', 'pgt', 'other']:
-                        category_name = category_input.upper()
+                    target_audience = request.POST.get('target_audience')
+                    category_input = request.POST.get('guidance_category', '').strip()
+                    subject_name = request.POST.get('subject_name')
                     
-                    category, _ = GuidanceCategory.objects.get_or_create(
-                        slug=category_slug,
-                        defaults={'name': category_name}
-                    )
-                    
-                    # Find or Create Subject (Case and whitespace insensitive)
-                    subject_name_clean = subject_name.strip()
-                    norm_target = "".join(subject_name_clean.split()).lower()
-                    
-                    existing_subjects = GuidanceSubject.objects.filter(category=category)
-                    subject = None
-                    for sub in existing_subjects:
-                        if "".join(sub.name.split()).lower() == norm_target:
-                            subject = sub
-                            break
-                    
-                    if not subject:
-                        subject = GuidanceSubject.objects.create(
-                            category=category,
-                            name=subject_name_clean
-                        )
-                    
-                    # Handle Topics
-                    topic_limit = int(request.POST.get('topic_count', 0))
-                    
-                    assigned_user = None
-                    if target_audience == 'individual':
-                        user_id = request.POST.get('selected_user_id')
-                        try:
-                            if user_id:
-                                assigned_user = User.objects.get(id=user_id)
-                            else:
-                                 # Fallback or Error
-                                 from django.contrib import messages
-                                 messages.error(request, "Please select a user for Individual Syllabus.")
-                                 return redirect('admin_dashboard')
-                        except User.DoesNotExist:
-                            from django.contrib import messages
-                            messages.error(request, "Selected user does not exist.")
-                            return redirect('admin_dashboard')
-                    
-                    # Loop through potential topics
-                    for i in range(topic_limit):
-                        title = request.POST.get(f'topic_title_{i}')
-                        if not title: 
-                            continue # Skip empty or missing
+                    # Find or Create Category
+                    if category_input:
+                        category_slug = slugify(category_input)
+                        if not category_slug:
+                            category_slug = "other"
                         
-                        desc = request.POST.get(f'topic_desc_{i}', '')
+                        # Ensure name display is neat (e.g. "PRT", "Librarian")
+                        category_name = category_input
+                        if category_slug in ['prt', 'tgt', 'pgt', 'other']:
+                            category_name = category_input.upper()
                         
-                        # Create Topic
-                        topic = GuidanceTopic.objects.create(
-                            subject=subject,
-                            title=title,
-                            description=desc,
-                            is_for_everyone=(target_audience == 'everyone')
+                        category, _ = GuidanceCategory.objects.get_or_create(
+                            slug=category_slug,
+                            defaults={'name': category_name}
                         )
                         
-                        if assigned_user:
-                            topic.assigned_users.add(assigned_user)
+                        # Find or Create Subject (Case and whitespace insensitive)
+                        subject_name_clean = subject_name.strip()
+                        norm_target = "".join(subject_name_clean.split()).lower()
                         
-                        topic.save()
-
-                        import re
-                        import os
-
-                        def sanitize_filename(filename):
-                            # Replace spaces and special characters with underscores
-                            name, ext = os.path.splitext(filename)
-                            name = re.sub(r'[^a-zA-Z0-9_.-]', '_', name)
-                            return name + ext
-
-                        # Handle Multiple Files
-                        # PPTs
-                        if request.FILES.getlist(f'topic_ppt_{i}[]'):
-                            for f in request.FILES.getlist(f'topic_ppt_{i}[]'):
-                                f.name = sanitize_filename(f.name)
-                                GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='ppt')
+                        existing_subjects = GuidanceSubject.objects.filter(category=category)
+                        subject = None
+                        for sub in existing_subjects:
+                            if "".join(sub.name.split()).lower() == norm_target:
+                                subject = sub
+                                break
                         
-                        # PDFs
-                        if request.FILES.getlist(f'topic_pdf_{i}[]'):
-                            for f in request.FILES.getlist(f'topic_pdf_{i}[]'):
-                                f.name = sanitize_filename(f.name)
-                                GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='pdf')
-
-                        # Images
-                        if request.FILES.getlist(f'topic_image_{i}[]'):
-                            for f in request.FILES.getlist(f'topic_image_{i}[]'):
-                                f.name = sanitize_filename(f.name)
-                                GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='image')
-
-                        # ===== Save MCQ Section =====
-                        mcq_mode = request.POST.get(f'topic_mcq_mode_{i}', 'none')
-                        if mcq_mode in ['ai', 'manual']:
+                        if not subject:
+                            subject = GuidanceSubject.objects.create(
+                                category=category,
+                                name=subject_name_clean
+                            )
+                        
+                        # Handle Topics
+                        topic_limit = int(request.POST.get('topic_count', 0))
+                        
+                        assigned_user = None
+                        if target_audience == 'individual':
+                            user_id = request.POST.get('selected_user_id')
                             try:
-                                timer_mins = int(request.POST.get(f'topic_mcq_timer_{i}', 10))
-                            except ValueError:
-                                timer_mins = 10
+                                if user_id:
+                                    assigned_user = User.objects.get(id=user_id)
+                                else:
+                                     # Fallback or Error
+                                     from django.contrib import messages
+                                     messages.error(request, "Please select a user for Individual Syllabus.")
+                                     return redirect('admin_dashboard')
+                            except User.DoesNotExist:
+                                from django.contrib import messages
+                                messages.error(request, "Selected user does not exist.")
+                                return redirect('admin_dashboard')
+                        
+                        # Loop through potential topics
+                        for i in range(topic_limit):
+                            title = request.POST.get(f'topic_title_{i}')
+                            if not title: 
+                                continue # Skip empty or missing
+                            
+                            desc = request.POST.get(f'topic_desc_{i}', '')
+                            
+                            # Create Topic
+                            topic = GuidanceTopic.objects.create(
+                                subject=subject,
+                                title=title,
+                                description=desc,
+                                is_for_everyone=(target_audience == 'everyone')
+                            )
+                            
+                            if assigned_user:
+                                topic.assigned_users.add(assigned_user)
+                            
+                            topic.save()
 
-                            raw_json = ''
-                            if mcq_mode == 'ai':
-                                raw_json = request.POST.get(f'topic_mcq_json_{i}', '').strip()
-                            elif mcq_mode == 'manual':
-                                raw_json = request.POST.get(f'topic_mcq_manual_json_{i}', '').strip()
+                            import re
+                            import os
 
-                            if raw_json:
+                            def sanitize_filename(filename):
+                                # Replace spaces and special characters with underscores
+                                name, ext = os.path.splitext(filename)
+                                name = re.sub(r'[^a-zA-Z0-9_.-]', '_', name)
+                                return name + ext
+
+                            # Handle Multiple Files
+                            # PPTs
+                            if request.FILES.getlist(f'topic_ppt_{i}[]'):
+                                for f in request.FILES.getlist(f'topic_ppt_{i}[]'):
+                                    f.name = sanitize_filename(f.name)
+                                    GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='ppt')
+                            
+                            # PDFs
+                            if request.FILES.getlist(f'topic_pdf_{i}[]'):
+                                for f in request.FILES.getlist(f'topic_pdf_{i}[]'):
+                                    f.name = sanitize_filename(f.name)
+                                    GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='pdf')
+
+                            # Images
+                            if request.FILES.getlist(f'topic_image_{i}[]'):
+                                for f in request.FILES.getlist(f'topic_image_{i}[]'):
+                                    f.name = sanitize_filename(f.name)
+                                    GuidanceTopicFile.objects.create(topic=topic, file=f, file_type='image')
+
+                            # ===== Save MCQ Section =====
+                            mcq_mode = request.POST.get(f'topic_mcq_mode_{i}', 'none')
+                            if mcq_mode in ['ai', 'manual']:
                                 try:
-                                    questions_data = json.loads(raw_json)
-                                    if isinstance(questions_data, list) and len(questions_data) > 0:
-                                        from .models import MCQSet, MCQ, MCQOption
-                                        mcq_set = MCQSet.objects.create(
-                                            topic=topic,
-                                            time_limit_minutes=timer_mins
-                                        )
-                                        for q_idx, q_item in enumerate(questions_data):
-                                            # --- Flexible key resolution ---
-                                            q_text = (
-                                                q_item.get('question') or
-                                                q_item.get('question_text') or
-                                                q_item.get('text') or ''
-                                            ).strip()
-                                            if not q_text:
-                                                continue
-                                            options_list = (
-                                                q_item.get('options') or
-                                                q_item.get('choices') or
-                                                q_item.get('answers') or []
-                                            )
-                                            correct_raw = (
-                                                q_item.get('correct') if q_item.get('correct') is not None
-                                                else q_item.get('correct_index', q_item.get('correct_option', q_item.get('answer', 0)))
-                                            )
-                                            correct_idx = 0
-                                            if isinstance(correct_raw, int):
-                                                correct_idx = correct_raw
-                                            elif isinstance(correct_raw, str):
-                                                val = correct_raw.strip()
-                                                if len(val) == 1 and val.upper() in 'ABCDEFGHIJ':
-                                                    correct_idx = ord(val.upper()) - 65
-                                                else:
-                                                    try:
-                                                        correct_idx = int(val)
-                                                    except ValueError:
-                                                        # match text to option
-                                                        for oi, ot in enumerate(options_list):
-                                                            if str(ot).strip().lower() == val.lower():
-                                                                correct_idx = oi
-                                                                break
+                                    timer_mins = int(request.POST.get(f'topic_mcq_timer_{i}', 10))
+                                except ValueError:
+                                    timer_mins = 10
 
-                                            mcq_question = MCQ.objects.create(
-                                                mcq_set=mcq_set,
-                                                question_text=q_text,
-                                                order=q_idx + 1
+                                raw_json = ''
+                                if mcq_mode == 'ai':
+                                    raw_json = request.POST.get(f'topic_mcq_json_{i}', '').strip()
+                                elif mcq_mode == 'manual':
+                                    raw_json = request.POST.get(f'topic_mcq_manual_json_{i}', '').strip()
+
+                                if raw_json:
+                                    try:
+                                        questions_data = json.loads(raw_json)
+                                        if isinstance(questions_data, list) and len(questions_data) > 0:
+                                            from .models import MCQSet, MCQ, MCQOption
+                                            mcq_set = MCQSet.objects.create(
+                                                topic=topic,
+                                                time_limit_minutes=timer_mins
                                             )
-                                            for opt_idx, opt_text in enumerate(options_list[:10]):
-                                                label = chr(65 + opt_idx)
-                                                MCQOption.objects.create(
-                                                    mcq=mcq_question,
-                                                    label=label,
-                                                    option_text=str(opt_text).strip(),
-                                                    is_correct=(opt_idx == correct_idx)
+                                            options_to_create = []
+                                            for q_idx, q_item in enumerate(questions_data):
+                                                # --- Flexible key resolution ---
+                                                q_text = (
+                                                    q_item.get('question') or
+                                                    q_item.get('question_text') or
+                                                    q_item.get('text') or ''
+                                                ).strip()
+                                                if not q_text:
+                                                    continue
+                                                options_list = (
+                                                    q_item.get('options') or
+                                                    q_item.get('choices') or
+                                                    q_item.get('answers') or []
                                                 )
-                                except Exception as json_err:
-                                    import traceback
-                                    print(f"Error parsing MCQ JSON for topic {i}:", json_err)
-                                    print(traceback.format_exc())
+                                                correct_raw = (
+                                                    q_item.get('correct') if q_item.get('correct') is not None
+                                                    else q_item.get('correct_index', q_item.get('correct_option', q_item.get('answer', 0)))
+                                                )
+                                                correct_idx = 0
+                                                if isinstance(correct_raw, int):
+                                                    correct_idx = correct_raw
+                                                elif isinstance(correct_raw, str):
+                                                    val = correct_raw.strip()
+                                                    if len(val) == 1 and val.upper() in 'ABCDEFGHIJ':
+                                                        correct_idx = ord(val.upper()) - 65
+                                                    else:
+                                                        try:
+                                                            correct_idx = int(val)
+                                                        except ValueError:
+                                                            # match text to option
+                                                            for oi, ot in enumerate(options_list):
+                                                                if str(ot).strip().lower() == val.lower():
+                                                                    correct_idx = oi
+                                                                    break
 
-                        # ===== Save Answer Writing Section =====
-                        answer_mode = request.POST.get(f'topic_answer_mode_{i}', 'manual')
-                        answer_questions_list = []
-                        if answer_mode == 'manual':
-                            answer_questions_list = [q.strip() for q in request.POST.getlist(f'topic_answer_questions_{i}[]') if q.strip()]
-                        elif answer_mode == 'paste':
-                            raw_text = request.POST.get(f'topic_answer_questions_{i}', '').strip()
-                            if raw_text:
-                                answer_questions_list = [q.strip() for q in raw_text.split('\n') if q.strip()]
-                                
-                        if answer_questions_list:
-                            from .models import AnswerWritingQuestion
-                            for q_text in answer_questions_list:
-                                q_text_clean = q_text.strip()
-                                if q_text_clean:
-                                    AnswerWritingQuestion.objects.create(topic=topic, question_text=q_text_clean)
-                
-                return redirect('admin_dashboard')
+                                                mcq_question = MCQ.objects.create(
+                                                    mcq_set=mcq_set,
+                                                    question_text=q_text,
+                                                    order=q_idx + 1
+                                                )
+                                                for opt_idx, opt_text in enumerate(options_list[:10]):
+                                                    label = chr(65 + opt_idx)
+                                                    options_to_create.append(MCQOption(
+                                                        mcq=mcq_question,
+                                                        label=label,
+                                                        option_text=str(opt_text).strip(),
+                                                        is_correct=(opt_idx == correct_idx)
+                                                    ))
+                                            if options_to_create:
+                                                MCQOption.objects.bulk_create(options_to_create)
+                                    except Exception as json_err:
+                                        import traceback
+                                        print(f"Error parsing MCQ JSON for topic {i}:", json_err)
+                                        print(traceback.format_exc())
+
+                            # ===== Save Answer Writing Section =====
+                            answer_mode = request.POST.get(f'topic_answer_mode_{i}', 'manual')
+                            answer_questions_list = []
+                            if answer_mode == 'manual':
+                                answer_questions_list = [q.strip() for q in request.POST.getlist(f'topic_answer_questions_{i}[]') if q.strip()]
+                            elif answer_mode == 'paste':
+                                raw_text = request.POST.get(f'topic_answer_questions_{i}', '').strip()
+                                if raw_text:
+                                    answer_questions_list = [q.strip() for q in raw_text.split('\n') if q.strip()]
+                                    
+                            if answer_questions_list:
+                                from .models import AnswerWritingQuestion
+                                questions_to_create = []
+                                for q_text in answer_questions_list:
+                                    q_text_clean = q_text.strip()
+                                    if q_text_clean:
+                                        questions_to_create.append(AnswerWritingQuestion(topic=topic, question_text=q_text_clean))
+                                if questions_to_create:
+                                    AnswerWritingQuestion.objects.bulk_create(questions_to_create)
+                    
+                    return redirect('admin_dashboard')
             except Exception as e:
                 import traceback
                 error_trace = traceback.format_exc()
