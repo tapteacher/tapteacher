@@ -63,6 +63,7 @@ urlpatterns = [
     # Inline MCQ edits
     path('edit_individual_mcq/<int:mcq_id>/', views.edit_individual_mcq, name='edit_individual_mcq'),
     path('delete_individual_mcq/<int:mcq_id>/', views.delete_individual_mcq, name='delete_individual_mcq'),
+    path('edit_mcq_timer/<int:mcq_set_id>/', views.edit_mcq_timer, name='edit_mcq_timer'),
     
     # Answer Writing Admin Routes
     path('add_answer_writing_question/<int:topic_id>/', views.add_answer_writing_question, name='add_answer_writing_question'),

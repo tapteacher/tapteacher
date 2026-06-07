@@ -2618,6 +2618,32 @@ def delete_individual_mcq(request, mcq_id):
 
 @csrf_exempt
 @login_required(login_url='login_view')
+def edit_mcq_timer(request, mcq_set_id):
+    """Superadmin: inline editing of MCQ timer."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=403)
+        
+    if request.method == 'POST':
+        from .models import MCQSet
+        import json
+        try:
+            data = json.loads(request.body)
+            timer_mins = int(data.get('time_limit_minutes', 10))
+            if timer_mins < 1:
+                return JsonResponse({'success': False, 'message': 'Timer must be at least 1 minute.'}, status=400)
+                
+            mcq_set = MCQSet.objects.get(id=mcq_set_id)
+            mcq_set.time_limit_minutes = timer_mins
+            mcq_set.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            
+    return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+
+
+@csrf_exempt
+@login_required(login_url='login_view')
 def add_answer_writing_question(request, topic_id):
     """Superadmin: dynamically add a new Answer Writing question to a topic."""
     if not request.user.is_superuser:

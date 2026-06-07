@@ -358,13 +358,26 @@
         </div>
         
         <!-- Top bar Info -->
-        <div class="quiz-header">
-            <div class="topic-info">
+        <div class="quiz-header" style="flex-wrap: wrap; gap: 16px;">
+            <div class="topic-info" style="min-width: 200px; flex: 1;">
                 <p>{{ subject.name }}</p>
                 <h1>{{ topic.title }} {% if is_manage_mode %}MCQ Set Manager{% else %}Quiz{% endif %}</h1>
             </div>
+            {% if request.user.is_superuser %}
+            <div style="display: flex; align-items: center; gap: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 14px; border-radius: 8px; flex-shrink: 0; box-shadow: var(--shadow-sm);">
+                <span style="font-size: 13px; font-weight: 700; color: #16a34a; white-space: nowrap;">⏱️ Limit:</span>
+                <input type="number" id="mcq-set-timer-input" value="{{ mcq_set.time_limit_minutes }}" min="1" max="999" 
+                       style="width: 55px; padding: 6px 8px; border: 1px solid #86efac; border-radius: 6px; font-weight: 700; text-align: center; font-size: 13px; background: white; color: #15803d; box-sizing: border-box;">
+                <span style="font-size: 13px; font-weight: 600; color: #16a34a; white-space: nowrap; margin-right: 4px;">mins</span>
+                <button type="button" onclick="updateMcqSetTimer()" 
+                        style="background: #16a34a; border: none; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap;"
+                        onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'">
+                    Save Time
+                </button>
+            </div>
+            {% endif %}
             {% if not is_manage_mode %}
-            <div class="timer-box" id="timer-box">
+            <div class="timer-box" id="timer-box" style="flex-shrink: 0;">
                 ⏱️ <span id="timer-display">00:00</span>
             </div>
             {% endif %}
@@ -950,6 +963,51 @@
             // Show results container
             document.getElementById('result-container').style.display = 'block';
         }
+
+        {% if request.user.is_superuser %}
+        function updateMcqSetTimer() {
+            const inputEl = document.getElementById('mcq-set-timer-input');
+            if (!inputEl) return;
+            const newMins = parseInt(inputEl.value);
+            if (isNaN(newMins) || newMins < 1) {
+                alert('Please enter a valid number of minutes (at least 1).');
+                return;
+            }
+            
+            const mcqSetId = {{ mcq_set.id }};
+            fetch(`/edit_mcq_timer/${mcqSetId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ time_limit_minutes: newMins })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Time limit updated successfully!');
+                    
+                    const oldLimit = limitMinutes;
+                    limitMinutes = newMins;
+                    totalSeconds = newMins * 60;
+                    
+                    if (!isManageMode) {
+                        // adjust time remaining based on difference
+                        const diffSeconds = (newMins - oldLimit) * 60;
+                        timeRemaining = Math.max(1, timeRemaining + diffSeconds);
+                        updateTimerDisplay();
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('An unexpected error occurred.');
+            });
+        }
+        {% endif %}
 
         function getCookie(name) {
             let cookieValue = null;
