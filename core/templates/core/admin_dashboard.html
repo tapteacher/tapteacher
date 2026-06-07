@@ -1289,7 +1289,7 @@
                                 <input type="radio" name="topic_mcq_mode_${id}" value="none" checked onchange="toggleMcqMode(${id})"> No MCQs
                             </label>
                             <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
-                                <input type="radio" name="topic_mcq_mode_${id}" value="ai" onchange="toggleMcqMode(${id})"> 🤖 Paste AI-Generated Code
+                                <input type="radio" name="topic_mcq_mode_${id}" value="ai" onchange="toggleMcqMode(${id})"> 🤖 Paste AI-Generated Text/JSON
                             </label>
                             <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
                                 <input type="radio" name="topic_mcq_mode_${id}" value="manual" onchange="toggleMcqMode(${id})"> ✏️ Manual Entry
@@ -1307,9 +1307,9 @@
 
                         <!-- AI JSON Paste -->
                         <div id="mcq-ai-${id}" style="display:none;">
-                            <label style="font-size:13px; font-weight:600; display:block; margin-bottom:8px;">Paste JSON from AI:</label>
-                            <textarea name="topic_mcq_json_${id}" rows="9" style="width:100%; font-family:monospace; font-size:12px; border:1px solid #c7d4ff; border-radius:6px; padding:10px; box-sizing:border-box; background:#fff;" placeholder='[\n  {\n    "question": "Which country hosted QUAD Summit 2025?",\n    "options": ["India", "USA", "Japan", "Australia"],\n    "correct": 0\n  }\n]\n\nTell AI: Give me 10 MCQs on [topic] in JSON with: question, options[], correct (0-based index)'></textarea>
-                            <p style="font-size:11px; color:#888; margin-top:5px;">💡 correct=0 means first option is correct, correct=1 means second option, etc.</p>
+                            <label style="font-size:13px; font-weight:600; display:block; margin-bottom:8px;">Paste Text or JSON from AI:</label>
+                            <textarea name="topic_mcq_json_${id}" rows="9" style="width:100%; font-family:inherit; font-size:13px; border:1px solid #c7d4ff; border-radius:6px; padding:10px; box-sizing:border-box; background:#fff; line-height:1.4;" placeholder="Option 1 (Direct Text):\n45.\nIndia's maritime location provides links through:\nA) Roads only\nB) Railways only\nC) Sea and air routes\nD) Pipelines only\nAnswer: C\n\nOption 2 (JSON Code):\n[\n  {\n    &quot;question&quot;: &quot;Which country hosted QUAD...&quot;,\n    &quot;options&quot;: [&quot;India&quot;, &quot;USA&quot;, &quot;Japan&quot;, &quot;Australia&quot;],\n    &quot;correct&quot;: 0\n  }\n]"></textarea>
+                            <p style="font-size:11px; color:#888; margin-top:5px;">💡 Accepts both raw text questions with options/answers AND standard JSON arrays.</p>
                         </div>
 
                         <!-- Manual MCQ Builder -->

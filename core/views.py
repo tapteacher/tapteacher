@@ -604,6 +604,77 @@ from .data import INDIA_DATA
 from django.http import JsonResponse
 from django.db.models import Count, Q
 
+
+def parse_raw_text_mcqs(text):
+    import re
+    questions = []
+    text = text.replace('\r\n', '\n').strip()
+    
+    # Split text into sections using regex: finding any line starting with digits followed by dot/parenthesis
+    pattern = r'(?:^|\n)\s*(\d+)\s*[\.\)]?\s*(?=\n|[A-Z_a-z]|\s)'
+    matches = list(re.finditer(pattern, text))
+    
+    blocks = []
+    if not matches:
+        blocks = [b.strip() for b in re.split(r'\n\s*\n', text) if b.strip()]
+    else:
+        for idx, match in enumerate(matches):
+            start = match.end()
+            end = matches[idx+1].start() if idx + 1 < len(matches) else len(text)
+            block_text = text[start:end].strip()
+            blocks.append(block_text)
+            
+    for block in blocks:
+        if not block:
+            continue
+            
+        lines = [line.strip() for line in block.split('\n') if line.strip()]
+        if not lines:
+            continue
+            
+        question_lines = []
+        options = []
+        correct_char = None
+        
+        for line in lines:
+            # Check if this line is an option (e.g. A) Option, A. Option, or A)Option)
+            opt_match = re.match(r'^([A-Ja-j])[\.\)]\s*(.*)', line)
+            if opt_match:
+                options.append(opt_match.group(2).strip())
+                continue
+                
+            # Check for paren option like (A) Option
+            opt_match_paren = re.match(r'^\(([A-Ja-j])\)\s*(.*)', line)
+            if opt_match_paren:
+                options.append(opt_match_paren.group(2).strip())
+                continue
+                
+            # Check if this line is the answer
+            ans_match = re.search(r'(?:Answer|Ans|Correct|Correct Answer)\s*[:\-=]\s*([A-Ja-j])', line, re.IGNORECASE)
+            if ans_match:
+                correct_char = ans_match.group(1).upper()
+                continue
+                
+            # Otherwise, it must be part of the question text
+            question_lines.append(line)
+            
+        q_text = " ".join(question_lines).strip()
+        
+        # Calculate correct index
+        correct_idx = 0
+        if correct_char:
+            correct_idx = ord(correct_char) - 65
+            
+        if q_text and len(options) >= 2:
+            questions.append({
+                'question': q_text,
+                'options': options,
+                'correct': correct_idx
+            })
+            
+    return questions
+
+
 @login_required(login_url='login_view')
 def admin_dashboard(request):
     is_superadmin = request.user.is_superuser
@@ -844,6 +915,12 @@ def admin_dashboard(request):
                                 if raw_json:
                                     try:
                                         questions_data = json.loads(raw_json)
+                                    except Exception:
+                                        try:
+                                            questions_data = parse_raw_text_mcqs(raw_json)
+                                        except Exception as parse_err:
+                                            questions_data = []
+                                            print(f"Failed to parse raw text MCQs for topic {i}:", parse_err)
                                         if isinstance(questions_data, list) and len(questions_data) > 0:
                                             from .models import MCQSet, MCQ, MCQOption
                                             mcq_set = MCQSet.objects.create(
