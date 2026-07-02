@@ -920,13 +920,15 @@ def admin_dashboard(request):
                                         except Exception as parse_err:
                                             questions_data = []
                                             print(f"Failed to parse raw text MCQs for topic {i}:", parse_err)
+                                        
                                         if isinstance(questions_data, list) and len(questions_data) > 0:
                                             from .models import MCQSet, MCQ, MCQOption
                                             mcq_set = MCQSet.objects.create(
                                                 topic=topic,
                                                 time_limit_minutes=timer_mins
                                             )
-                                            options_to_create = []
+                                            mcqs_to_create = []
+                                            questions_info = []
                                             for q_idx, q_item in enumerate(questions_data):
                                                 # --- Flexible key resolution ---
                                                 q_text = (
@@ -962,21 +964,27 @@ def admin_dashboard(request):
                                                                     correct_idx = oi
                                                                     break
 
-                                                mcq_question = MCQ.objects.create(
+                                                mcqs_to_create.append(MCQ(
                                                     mcq_set=mcq_set,
                                                     question_text=q_text,
-                                                    order=q_idx + 1
-                                                )
-                                                for opt_idx, opt_text in enumerate(options_list[:10]):
-                                                    label = chr(65 + opt_idx)
-                                                    options_to_create.append(MCQOption(
-                                                        mcq=mcq_question,
-                                                        label=label,
-                                                        option_text=str(opt_text).strip(),
-                                                        is_correct=(opt_idx == correct_idx)
-                                                    ))
-                                            if options_to_create:
-                                                MCQOption.objects.bulk_create(options_to_create)
+                                                    order=len(mcqs_to_create) + 1
+                                                ))
+                                                questions_info.append((options_list, correct_idx))
+
+                                            if mcqs_to_create:
+                                                created_mcqs = MCQ.objects.bulk_create(mcqs_to_create)
+                                                options_to_create = []
+                                                for mcq_question, (options_list, correct_idx) in zip(created_mcqs, questions_info):
+                                                    for opt_idx, opt_text in enumerate(options_list[:10]):
+                                                        label = chr(65 + opt_idx)
+                                                        options_to_create.append(MCQOption(
+                                                            mcq=mcq_question,
+                                                            label=label,
+                                                            option_text=str(opt_text).strip(),
+                                                            is_correct=(opt_idx == correct_idx)
+                                                        ))
+                                                if options_to_create:
+                                                    MCQOption.objects.bulk_create(options_to_create)
                                     except Exception as json_err:
                                         import traceback
                                         print(f"Error parsing MCQ JSON for topic {i}:", json_err)
