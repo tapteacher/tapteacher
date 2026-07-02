@@ -788,10 +788,9 @@ def admin_dashboard(request):
         # Handle "Upload Syllabus" submission
         elif 'upload_syllabus' in request.POST:
             try:
-                from django.db import transaction
-                with transaction.atomic():
-                    from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, GuidanceTopicFile, User
-                    from django.utils.text import slugify
+                from .models import GuidanceCategory, GuidanceSubject, GuidanceTopic, GuidanceTopicFile, User
+                from django.utils.text import slugify
+                if True:
                     
                     target_audience = request.POST.get('target_audience')
                     category_input = request.POST.get('guidance_category', '').strip()
